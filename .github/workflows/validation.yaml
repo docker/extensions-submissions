@@ -1,10 +1,6 @@
 name: Extension validation
 
 on:
-  issues:
-    types:
-      - labeled
-      - unlabeled
   workflow_call:
 
 env:
