@@ -1,0 +1,229 @@
+name: Extension validation
+
+on:
+  issues:
+    types:
+      - labeled
+      - unlabeled
+  workflow_call:
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  pre:
+    if: github.event.issue.closed == false
+    name: Prepare validation
+    runs-on: ubuntu-latest
+    outputs:
+      tos_accepted: ${{ steps.checks.outputs.tos_accepted }}
+      already_validated: ${{ steps.checks.outputs.already_validated }}
+    steps:
+      - id: checks
+        run: |
+          labels=$(gh issue view ${{ github.event.issue.number }} --json labels --jq '[.labels[].name]')
+          echo "tos_accepted=$(echo $labels | jq '. | index("tos/accepted") != null' )" >> $GITHUB_OUTPUT
+          echo "already_validated=$(echo $labels | jq '. | index("validation/succeeded") != null' )" >> $GITHUB_OUTPUT
+
+  validate:
+    name: Validate extension
+    runs-on: macOS-latest
+    needs: pre
+    if: |
+      needs.pre.outputs.tos_accepted == 'true'
+      && needs.pre.outputs.already_validated == 'false'
+    steps:
+      - name: Find eventual initial comment
+        uses: peter-evans/find-comment@v2.1.0
+        id: fc
+        continue-on-error: true
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          comment-author: 'github-actions[bot]'
+          body-includes: ${{ github.workflow}} workflow has started
+          direction: last
+
+      - name: Get Date
+        id: get-date
+        run: |
+          echo "date=$(/bin/date -u "+%Y%m%d")" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Redirect api.segment.io to localhost
+        id: redirect-segment
+        run: |
+          echo '127.0.0.2 api.segment.io' | sudo tee -a /etc/hosts
+          cat /etc/hosts
+
+      - name: Get Docker app cache
+        id: cache-docker-desktop-app
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-docker-desktop-app
+        with:
+          path: /Applications/Docker.app
+          key: docker-desktop-app-mac-amd64-${{ steps.get-date.outputs.date }}
+
+      - name: Get Docker install settings cache
+        id: cache-docker-desktop-install-settings
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-docker-desktop-install-settings
+        with:
+          path: ./cache/desktopInstallSettings/
+          key: docker-desktop-install-settings-mac-${{ steps.get-date.outputs.date }}
+
+      - name: Copy Desktop install settings in /Library
+        if: steps.cache-docker-desktop-install-settings.outputs.cache-hit == 'true'
+        run: |
+          echo "ls ./cache/desktopInstallSettings/"
+          ls ./cache/desktopInstallSettings/
+          sudo mkdir -p "/Library/Application Support/com.docker.docker"
+          sudo cp ./cache/desktopInstallSettings/* "/Library/Application Support/com.docker.docker/"
+          echo "/Library/Application Support/com.docker.docker/"
+          ls "/Library/Application Support/com.docker.docker/"
+
+      - name: Fetch and install Docker Desktop dmg
+        if: steps.cache-docker-desktop-install-settings.outputs.cache-hit != 'true'
+        run: |
+          sw_vers
+          mkdir ./temp
+          mkdir ./mount
+          wget -q -O ./temp/DockerDesktop.dmg https://desktop.docker.com/mac/main/amd64/Docker.dmg
+          /usr/bin/hdiutil attach -noverify ./temp/DockerDesktop.dmg -mountpoint ./mount/desktop -nobrowse
+          echo "dmg mounted"
+          sudo ./mount/desktop/Docker.app/Contents/MacOS/install --accept-license
+          echo "dmg installed"
+          echo "ls /Library/Application Support/com.docker.docker"
+          ls "/Library/Application Support/com.docker.docker" || true
+          mkdir -p ./cache/desktopInstallSettings
+          cp "/Library/Application Support/com.docker.docker/"* ./cache/desktopInstallSettings/
+          echo "ls ./cache/desktopInstallSettings/"
+          ls ./cache/desktopInstallSettings/ || true
+          /usr/bin/hdiutil detach ./mount/desktop
+          echo "dmg unmounted"
+
+      - name: Start Docker Desktop
+        timeout-minutes: 5
+        run: |
+          sudo mkdir /Library/PrivilegedHelperTools
+          sudo /Applications/Docker.app/Contents/MacOS/install config --user runner
+          sudo /Applications/Docker.app/Contents/MacOS/install vmnetd
+          echo "app installed"
+          /usr/bin/open /Applications/Docker.app --args --unattended --add-host-docker-internal-registry
+          echo "Docker starting..."
+
+      - name: Wait for Docker to be up and running
+        timeout-minutes: 10
+        run: |
+          until docker ps; do echo "ps failed, sleep 10 s and try again"; sleep 10; done
+          echo "Docker started and ready"
+
+      - name: Parse issue body
+        id: parse
+        uses: zentered/issue-forms-body-parser@v1.5.1
+
+      - name: Find extension repository
+        id: parse-repository
+        run: |
+          echo "repository=$(echo '${{ steps.parse.outputs.data }}' | jq -r '.["docker-hub-repository-name"].text' )" >> $GITHUB_OUTPUT
+
+      - name: Validate extension
+        id: validate
+        continue-on-error: true
+        run: |
+          touch output.txt
+          docker extension validate -a -s -i ${{ steps.parse-repository.outputs.repository }} &> output.txt
+
+      - name: Read validation output
+        run: |          
+          delimiter=$(uuidgen)
+          
+          echo "VALIDATION_OUTPUT<<$delimiter" >> $GITHUB_ENV
+          cat output.txt >> $GITHUB_ENV
+          echo "$delimiter" >> $GITHUB_ENV
+
+      - uses: actions/checkout@v3
+
+      - name: Add Comment if validation succeeded
+        if: steps.validate.outcome == 'success'
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          edit-mode: replace
+          issue-number: ${{ github.event.issue.number }}
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          body: |
+            :white_check_mark: Validation ended successfully
+
+            Yay! The extension [${{ steps.parse-repository.outputs.repository }}](https://open.docker.com/extensions/marketplace?extensionId=${{ steps.parse-repository.outputs.repository }}) is valid :tada:.
+
+            Now, @docker/extensions will add the `publish/ready` label to the issue which will start the publishing of the extension on the marketplace.
+            Once published, this issue will be closed :smile:.
+
+            In the meantime, you can answer a couple of questions to tell us how your experience building a Docker Desktop extension was :smiley:: https://forms.gle/88SLHsn2Xb1BgMQ49.
+
+
+            <details>
+            <summary>Click to see the validation output</summary>
+
+            > ${{ env.VALIDATION_OUTPUT }}
+            </details>
+
+            ---
+            See [action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
+
+      - name: Add 'validation/succeeded' label
+        if: steps.validate.outcome == 'success'
+        run: |
+          gh issue edit ${{ github.event.issue.number }} --remove-label "validation/failed"
+          gh issue edit ${{ github.event.issue.number }} --add-label "validation/succeeded"
+
+      - name: Remove 'validation/succeeded' label
+        if: steps.validate.outcome != 'success'
+        run: |
+          gh issue edit ${{ github.event.issue.number }} --remove-label "validation/succeeded"
+          gh issue edit ${{ github.event.issue.number }} --add-label "validation/failed"
+
+      - name: Add Comment if validation failed
+        if: steps.validate.outcome != 'success'
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          edit-mode: replace
+          issue-number: ${{ github.event.issue.number }}
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          body: |
+            :x: Validation failed with the following errors
+
+            > ${{ env.VALIDATION_OUTPUT }}
+
+            Please fix the issues and comment with `/validate` to re-run the validation when you are ready.
+
+            ---
+            See [action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
+
+      - name: Add Comment if job failed
+        if: failure()
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          edit-mode: replace
+          issue-number: ${{ github.event.issue.number }}
+          comment-id: ${{ steps.fc.outputs.comment-id }}
+          body: |
+            :x: There was a problem during the validation job.
+
+            Someone from the @docker/extensions will have to take a look at this issue.
+            We will let you know in this issue when it is fixed.
+
+            ---
+            See [action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
+
+
+      - name: Add 'docker/validation-errored' label if job failed
+        if: failure()
+        run: |
+          gh issue edit ${{ github.event.issue.number }} --add-label "docker/validation-errored"
+
+      - name: Mark job as failed
+        if: steps.validate.outcome != 'success'
+        run: exit 1

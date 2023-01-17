@@ -1,0 +1,10 @@
+name: TOS Assistant
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  TOSAssistant:
+    runs-on: ubuntu-latest
+    steps:
+      - name:
