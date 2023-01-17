@@ -18,13 +18,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       tos_accepted: ${{ steps.checks.outputs.tos_accepted }}
-      already_validated: ${{ steps.checks.outputs.already_validated }}
     steps:
       - id: checks
         run: |
           labels=$(gh issue view ${{ github.event.issue.number }} --json labels --jq '[.labels[].name]')
           echo "tos_accepted=$(echo $labels | jq '. | index("tos/accepted") != null' )" >> $GITHUB_OUTPUT
-          echo "already_validated=$(echo $labels | jq '. | index("validation/succeeded") != null' )" >> $GITHUB_OUTPUT
 
   validate:
     name: Validate extension
@@ -32,7 +30,6 @@ jobs:
     needs: pre
     if: |
       needs.pre.outputs.tos_accepted == 'true'
-      && needs.pre.outputs.already_validated == 'false'
     steps:
       - name: Find eventual initial comment
         uses: peter-evans/find-comment@v2.1.0
