@@ -37,17 +37,28 @@ jobs:
           body-includes: ${{ github.workflow}} workflow has started
           direction: last
 
-      - name: Get Date
-        id: get-date
-        run: |
-          echo "date=$(/bin/date -u "+%Y%m%d")" >> $GITHUB_OUTPUT
-        shell: bash
-
       - name: Redirect api.segment.io to localhost
         id: redirect-segment
         run: |
           echo '127.0.0.2 api.segment.io' | sudo tee -a /etc/hosts
           cat /etc/hosts
+
+      - name: Download appcast
+        run: |
+          curl https://prod-docker-desktop.s3.amazonaws.com/mac/main/amd64/appcast.xml -o appcast.xml
+
+      - name: Get Docker Desktop latest build url
+        uses: mavrosxristoforos/get-xml-info@1.1.1
+        id: get-build-url
+        with:
+          xml-path: appcast.xml
+          xpath: //channel/link
+
+      - name: Get Docker Desktop latest build number
+        id: get-build-number
+        run: |
+          build=$(echo ${{ steps.get-build-url.outputs.result }} | sed -E 's/.*\/([0-9]+)\/.*/\1/')
+          echo "build=$build" >> $GITHUB_OUTPUT
 
       - name: Get Docker app cache
         id: cache-docker-desktop-app
@@ -56,7 +67,7 @@ jobs:
           cache-name: cache-docker-desktop-app
         with:
           path: /Applications/Docker.app
-          key: docker-desktop-app-mac-amd64-${{ steps.get-date.outputs.date }}
+          key: docker-desktop-app-mac-amd64-${{ steps.get-build-number.outputs.build }}
 
       - name: Get Docker install settings cache
         id: cache-docker-desktop-install-settings
@@ -65,7 +76,7 @@ jobs:
           cache-name: cache-docker-desktop-install-settings
         with:
           path: ./cache/desktopInstallSettings/
-          key: docker-desktop-install-settings-mac-${{ steps.get-date.outputs.date }}
+          key: docker-desktop-install-settings-mac-${{ steps.get-build-number.outputs.build }}
 
       - name: Copy Desktop install settings in /Library
         if: steps.cache-docker-desktop-install-settings.outputs.cache-hit == 'true'
@@ -83,7 +94,7 @@ jobs:
           sw_vers
           mkdir ./temp
           mkdir ./mount
-          wget -q -O ./temp/DockerDesktop.dmg https://desktop.docker.com/mac/main/amd64/Docker.dmg
+          wget -q -O ./temp/DockerDesktop.dmg ${{ steps.get-build-url.outputs.result }}
           /usr/bin/hdiutil attach -noverify ./temp/DockerDesktop.dmg -mountpoint ./mount/desktop -nobrowse
           echo "dmg mounted"
           sudo ./mount/desktop/Docker.app/Contents/MacOS/install --accept-license
