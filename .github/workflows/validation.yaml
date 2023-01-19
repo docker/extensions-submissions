@@ -8,35 +8,74 @@ env:
   GH_REPO: ${{ github.repository }}
 
 jobs:
-  pre:
-    if: github.event.issue.closed == false
-    name: Prepare validation
+  parse-issue:
     runs-on: ubuntu-latest
     outputs:
-      tos_accepted: ${{ steps.checks.outputs.tos_accepted }}
+      repository: ${{ steps.parse.outputs.repository }}
     steps:
-      - id: checks
-        run: |
-          labels=$(gh issue view ${{ github.event.issue.number }} --json labels --jq '[.labels[].name]')
-          echo "tos_accepted=$(echo $labels | jq '. | index("tos/accepted") != null' )" >> $GITHUB_OUTPUT
+      - name: Parse issue body
+        id: parse
+        uses: zentered/issue-forms-body-parser@v1.5.1
 
-  validate:
-    name: Validate extension
-    runs-on: macOS-latest
-    needs: pre
-    if: |
-      needs.pre.outputs.tos_accepted == 'true'
+      - name: Find extension repository
+        id: parse-repository
+        run: |
+          repository=$(echo '${{ steps.parse.outputs.data }}' | jq -r '.["docker-hub-repository-name"].text' )
+          echo "repository=$repository" >> $GITHUB_OUTPUT
+          
+          if [[ $repository == null ]]; then
+            # Check if $GITHUB_STEP_SUMMARY exist o avoid the following lines to error when running with act
+            if [[ -w "$GITHUB_STEP_SUMMARY" ]]; then
+              echo "No repository found in the body of the issue ${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
+              echo "Is the \"docker-hub-repository-name\" field present?" >> $GITHUB_STEP_SUMMARY
+              echo ${{ steps.parse.outputs.data }} >> $GITHUB_STEP_SUMMARY
+            fi
+            exit 1
+          fi
+
+  error:
+    runs-on: ubuntu-latest
+    needs: parse-issue
+    if: failure() && needs.parse-issue.outputs.repository == null
     steps:
-      - name: Find eventual initial comment
-        uses: peter-evans/find-comment@v2.1.0
-        id: fc
-        continue-on-error: true
+      - uses: actions/checkout@v3
+
+      - name: Render template
+        id: render
+        uses: chuhlomin/render-template@v1.6
+        with:
+          template: .github/workflows/templates/validation-repository-not-found.md
+          vars: |
+            workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+      - name: Add comment
+        if: env.ACT == false # do not comment when running with act
+        uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.issue.number }}
-          comment-author: 'github-actions[bot]'
-          body-includes: ${{ github.workflow}} workflow has started
-          direction: last
+          body: ${{ steps.render.outputs.result }}
 
+      - name: Mark job as failed
+        run: exit 1
+
+  noop-validate:
+    if: env.ACT
+    runs-on: ubuntu-latest
+    needs: parse-issue
+    outputs:
+      validation_output: ${{ steps.set-output.outputs.validation_output }}
+    steps:
+      - id: set-output
+        run: echo "validation_output=No errors" >> $GITHUB_OUTPUT
+
+  validate:
+    if: !env.ACT
+    name: Validate extension
+    runs-on: macOS-latest
+    needs: parse-issue
+    outputs:
+      validation_output: ${{ steps.validate.outputs.validation_output }}
+    steps:
       - name: Redirect api.segment.io to localhost
         id: redirect-segment
         run: |
@@ -124,110 +163,116 @@ jobs:
           until docker ps; do echo "ps failed, sleep 10 s and try again"; sleep 10; done
           echo "Docker started and ready"
 
-      - name: Parse issue body
-        id: parse
-        uses: zentered/issue-forms-body-parser@v1.5.1
-
-      - name: Find extension repository
-        id: parse-repository
-        run: |
-          echo "repository=$(echo '${{ steps.parse.outputs.data }}' | jq -r '.["docker-hub-repository-name"].text' )" >> $GITHUB_OUTPUT
-
       - name: Validate extension
         id: validate
         continue-on-error: true
         run: |
           touch output.txt
-          docker extension validate -a -s -i ${{ steps.parse-repository.outputs.repository }} &> output.txt
+          docker extension validate -a -s -i ${{ needs.parse-issue.outputs.repository }} &> output.txt
 
       - name: Read validation output
-        run: |          
+        run: |
           delimiter=$(uuidgen)
-          
-          echo "VALIDATION_OUTPUT<<$delimiter" >> $GITHUB_ENV
-          cat output.txt >> $GITHUB_ENV
-          echo "$delimiter" >> $GITHUB_ENV
+          echo "validation_output=<<$delimiter" >> $GITHUB_OUTPUT
+          cat output.txt >> $GITHUB_OUTPUT
+          echo "$delimiter" >> $GITHUB_OUTPUT
 
+      - name: Mark jobs as failed
+        if: ${{ steps.validate.outcome }} == 'failure'
+        run: exit 1
+
+  validation-succeeded:
+    runs-on: ubuntu-latest
+    needs: [parse-issue, validate, noop-validate]
+    # always() make sure the job is run even if the noop-validate or validate jobs are skipped
+    if: |
+      always()
+      && (needs.validate.result == 'success' || needs.noop-validate.result== 'success')
+    steps:
       - uses: actions/checkout@v3
 
-      - name: Add Comment if validation succeeded
-        if: steps.validate.outcome == 'success'
+      - name: Render template
+        id: render
+        uses: chuhlomin/render-template@v1.6
+        with:
+          template: .github/workflows/templates/validation-succeeded.md
+          vars: |
+            workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            extension: ${{ needs.parse-issue.outputs.repository }}
+            validation_output: ${{ needs.validate.outputs.validation_output || needs.noop-validate.outputs.validation_output }}
+
+      - name: Add Comment
+        if: env.ACT == false
         uses: peter-evans/create-or-update-comment@v2
         with:
-          edit-mode: replace
           issue-number: ${{ github.event.issue.number }}
-          comment-id: ${{ steps.fc.outputs.comment-id }}
-          body: |
-            :white_check_mark: Validation ended successfully
+          body: ${{ steps.render.outputs.result }}
 
-            Yay! The extension [${{ steps.parse-repository.outputs.repository }}](https://open.docker.com/extensions/marketplace?extensionId=${{ steps.parse-repository.outputs.repository }}) is valid :tada:.
-
-            Now, @docker/extensions will add the `publish/ready` label to the issue which will start the publishing of the extension on the marketplace.
-            Once published, this issue will be closed :smile:.
-
-            In the meantime, you can answer a couple of questions to tell us how your experience building a Docker Desktop extension was :smiley:: https://forms.gle/88SLHsn2Xb1BgMQ49.
-
-
-            <details>
-            <summary>Click to see the validation output</summary>
-
-            > ${{ env.VALIDATION_OUTPUT }}
-            </details>
-
-            ---
-            See [action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
-
-      - name: Add 'validation/succeeded' label
-        if: steps.validate.outcome == 'success'
+      - name: Update labels
+        if: env.ACT == false
         run: |
           gh issue edit ${{ github.event.issue.number }} --remove-label "validation/failed"
           gh issue edit ${{ github.event.issue.number }} --add-label "validation/succeeded"
 
-      - name: Remove 'validation/succeeded' label
-        if: steps.validate.outcome != 'success'
+  validation-failed:
+    runs-on: ubuntu-latest
+    needs: [parse-issue, validate, noop-validate]
+    if: needs.validate.result != 'success' ||  needs.noop-validate.result != 'success'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Render template
+        id: render
+        uses: chuhlomin/render-template@v1.6
+        with:
+          template: .github/workflows/templates/validation-failed.md
+          vars: |
+            workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            validation_output: ${{ needs.validate.outputs.validation_output || needs.noop-validate.outputs.validation_output }}
+
+      - name: Add comment
+        if: env.ACT == false # do not comment when running with act
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: ${{ steps.render.outputs.result }}
+
+      - name: Update labels
+        if: env.ACT == false
         run: |
           gh issue edit ${{ github.event.issue.number }} --remove-label "validation/succeeded"
           gh issue edit ${{ github.event.issue.number }} --add-label "validation/failed"
 
-      - name: Add Comment if validation failed
-        if: steps.validate.outcome != 'success'
+      - name: Mark job as failed
+        run: exit 1
+
+  validation-errored:
+    runs-on: ubuntu-latest
+    needs: [validate, noop-validate]
+    if: needs.validate.result == 'failure' || needs.noop-validate.result == 'failure'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Render template
+        id: render
+        uses: chuhlomin/render-template@v1.6
+        with:
+          template: .github/workflows/templates/validation-errored.md
+          vars: |
+            workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            validation_output: ${{ needs.validate.outputs.validation_output || needs.noop-validate.outputs.validation_output }}
+
+      - name: Add comment
+        if: env.ACT == false # do not comment when running with act
         uses: peter-evans/create-or-update-comment@v2
         with:
-          edit-mode: replace
           issue-number: ${{ github.event.issue.number }}
-          comment-id: ${{ steps.fc.outputs.comment-id }}
-          body: |
-            :x: Validation failed with the following errors
+          body: ${{ steps.render.outputs.result }}
 
-            > ${{ env.VALIDATION_OUTPUT }}
-
-            Please fix the issues and comment with `/validate` to re-run the validation when you are ready.
-
-            ---
-            See [action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
-
-      - name: Add Comment if job failed
-        if: failure()
-        uses: peter-evans/create-or-update-comment@v2
-        with:
-          edit-mode: replace
-          issue-number: ${{ github.event.issue.number }}
-          comment-id: ${{ steps.fc.outputs.comment-id }}
-          body: |
-            :x: There was a problem during the validation job.
-
-            Someone from the @docker/extensions will have to take a look at this issue.
-            We will let you know in this issue when it is fixed.
-
-            ---
-            See [action](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) for more details.
-
-
-      - name: Add 'docker/validation-errored' label if job failed
-        if: failure()
+      - name: Add 'docker/validation-errored' label
+        if: env.ACT == false
         run: |
           gh issue edit ${{ github.event.issue.number }} --add-label "docker/validation-errored"
 
       - name: Mark job as failed
-        if: steps.validate.outcome != 'success'
         run: exit 1
