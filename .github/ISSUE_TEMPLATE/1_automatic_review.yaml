@@ -33,3 +33,7 @@ body:
         - label: I accept the [term of services](https://www.docker.com/legal/extensions_marketplace_developer_agreement/)
     validations:
       required: true
+  - type: markdown
+    attributes:
+      value: |
+        We will contact you if necessary using the email address that is associated with your Docker Hub account.
