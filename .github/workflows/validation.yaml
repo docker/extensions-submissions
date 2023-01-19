@@ -11,32 +11,33 @@ jobs:
   parse-issue:
     runs-on: ubuntu-latest
     outputs:
-      repository: ${{ steps.parse.outputs.repository }}
+      repository: ${{ steps.set-output.outputs.repository }}
     steps:
       - name: Parse issue body
         id: parse
         uses: zentered/issue-forms-body-parser@v1.5.1
 
       - name: Find extension repository
-        id: parse-repository
+        id: set-output
         run: |
           repository=$(echo '${{ steps.parse.outputs.data }}' | jq -r '.["docker-hub-repository-name"].text' )
           echo "repository=$repository" >> $GITHUB_OUTPUT
-          
-          if [[ $repository == null ]]; then
-            # Check if $GITHUB_STEP_SUMMARY exist o avoid the following lines to error when running with act
-            if [[ -w "$GITHUB_STEP_SUMMARY" ]]; then
-              echo "No repository found in the body of the issue ${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
-              echo "Is the \"docker-hub-repository-name\" field present?" >> $GITHUB_STEP_SUMMARY
-              echo ${{ steps.parse.outputs.data }} >> $GITHUB_STEP_SUMMARY
-            fi
-            exit 1
+
+      - name: Validate repository
+        if: steps.set-output.outputs.repository == 'null'
+        run: |
+          # Check if $GITHUB_STEP_SUMMARY exist o avoid the following lines to error when running with act
+          if [[ -w "$GITHUB_STEP_SUMMARY" ]]; then
+            echo "No repository found in the body of the issue ${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
+            echo "Is the \"docker-hub-repository-name\" field present?" >> $GITHUB_STEP_SUMMARY
+            echo ${{ steps.parse.outputs.data }} >> $GITHUB_STEP_SUMMARY
           fi
+          exit 1
 
   error:
     runs-on: ubuntu-latest
     needs: parse-issue
-    if: failure() && needs.parse-issue.outputs.repository == null
+    if: failure()
     steps:
       - uses: actions/checkout@v3
 
@@ -59,17 +60,26 @@ jobs:
         run: exit 1
 
   noop-validate:
-    if: env.ACT
+    if: github.event.act == true
     runs-on: ubuntu-latest
     needs: parse-issue
     outputs:
       validation_output: ${{ steps.set-output.outputs.validation_output }}
     steps:
       - id: set-output
-        run: echo "validation_output=No errors" >> $GITHUB_OUTPUT
+        run: |
+          if [[ ${TEST_VALIDATION_FAILED} ]]; then
+            echo "validation_output=There are errors" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+          if [[ ${TEST_VALIDATION_ERRORED} ]]; then
+            # Do not set the validation_output variable on failure
+            exit 1
+          fi
+          echo "validation_output=No errors" >> $GITHUB_OUTPUT
 
   validate:
-    if: !env.ACT
+    if: github.event.act == false
     name: Validate extension
     runs-on: macOS-latest
     needs: parse-issue
@@ -183,11 +193,8 @@ jobs:
 
   validation-succeeded:
     runs-on: ubuntu-latest
-    needs: [parse-issue, validate, noop-validate]
-    # always() make sure the job is run even if the noop-validate or validate jobs are skipped
-    if: |
-      always()
-      && (needs.validate.result == 'success' || needs.noop-validate.result== 'success')
+    needs: [parse-issue, noop-validate, validate]
+    if: always() && (needs.validate.result == 'success' || needs.noop-validate.result == 'success')
     steps:
       - uses: actions/checkout@v3
 
@@ -216,8 +223,11 @@ jobs:
 
   validation-failed:
     runs-on: ubuntu-latest
-    needs: [parse-issue, validate, noop-validate]
-    if: needs.validate.result != 'success' ||  needs.noop-validate.result != 'success'
+    needs: [parse-issue, noop-validate, validate]
+    if: |
+      always() &&
+      (needs.validate.result == 'failure' && needs.validate.outputs.validation_output != '') ||
+      (needs.noop-validate.result == 'failure' && needs.noop-validate.outputs.validation_output != '')
     steps:
       - uses: actions/checkout@v3
 
@@ -248,8 +258,11 @@ jobs:
 
   validation-errored:
     runs-on: ubuntu-latest
-    needs: [validate, noop-validate]
-    if: needs.validate.result == 'failure' || needs.noop-validate.result == 'failure'
+    needs: [noop-validate, validate]
+    if: |
+      always() &&
+      (needs.validate.result == 'failure' && needs.validate.outputs.validation_output == '') ||
+      (needs.noop-validate.result == 'failure' && needs.noop-validate.outputs.validation_output == '')
     steps:
       - uses: actions/checkout@v3
 
