@@ -1,0 +1,11 @@
+level=info msg="Tag not specified, greatest semver tag resolved: 0.0.3"
+level=info msg="Pulled image"
+level=info msg="Checked image labels"
+level=info msg="Checked metadata.json"
+level=info msg="Checked image tag is semver"
+level=info msg="Checked image is multiplatform"
+level=info msg="Checked extension is compatible with current SDK version"
+level=info msg="Installed extension"
+level=info msg="Removed extension"
+🎉 The extension "benjaming/extension-builder-extension:0.0.3" passes the validation checks.
+If you want to make your extension available in the marketplace, please submit it for publication at https://www.docker.com/products/extensions/submissions/

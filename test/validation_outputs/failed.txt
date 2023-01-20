@@ -1,0 +1,15 @@
+level=info msg="Tag not specified, greatest semver tag resolved: 0.0.9"
+level=info msg="Pulled image"
+level=info msg="Checked image labels"
+level=error msg="(required) image label "com.docker.desktop.extension.icon" is missing"
+level=error msg="(required) image label "com.docker.extension.categories" is missing"
+Image labels check failed. Learn more at: https://docs.docker.com/desktop/extensions-sdk/extensions/labels/
+level=info msg="Checked metadata.json"
+level=info msg="Checked image tag is semver"
+level=info msg="Checked image is multiplatform"
+level=info msg="Checked extension is compatible with current SDK version"
+level=error msg="(required) image label "com.docker.desktop.extension.api.version" ("0.3.0") is incompatible with current SDK version "0.3.3". Consider changing it to ">=0.3.3""
+level=info msg="Installed extension"
+level=info msg="Removed extension"
+The extension "benjaming/hey-moby-extension:0.0.9" hasn't passed the checks to be published.
+Please fix the errors above and run the validate command again.

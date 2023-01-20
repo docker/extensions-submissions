@@ -26,7 +26,7 @@ jobs:
       - name: Validate repository
         if: steps.set-output.outputs.repository == 'null'
         run: |
-          # Check if $GITHUB_STEP_SUMMARY exist o avoid the following lines to error when running with act
+          # Check if $GITHUB_STEP_SUMMARY exist to avoid the following lines to error when running with act
           if [[ -w "$GITHUB_STEP_SUMMARY" ]]; then
             echo "No repository found in the body of the issue ${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
             echo "Is the \"docker-hub-repository-name\" field present?" >> $GITHUB_STEP_SUMMARY
@@ -66,17 +66,28 @@ jobs:
     outputs:
       validation_output: ${{ steps.set-output.outputs.validation_output }}
     steps:
+      - uses: actions/checkout@v3
       - id: set-output
         run: |
+          delimiter="$(openssl rand -hex 8)"
+
           if [[ ${TEST_VALIDATION_FAILED} ]]; then
-            echo "validation_output=There are errors" >> $GITHUB_OUTPUT
+            echo "validation_output<<${delimiter}" >> $GITHUB_OUTPUT
+            echo "$(cat test/validation_outputs/failed.txt)" >> $GITHUB_OUTPUT
+            echo "${delimiter}" >> $GITHUB_OUTPUT
+
             exit 1
           fi
+
           if [[ ${TEST_VALIDATION_ERRORED} ]]; then
             # Do not set the validation_output variable on failure
             exit 1
           fi
-          echo "validation_output=No errors" >> $GITHUB_OUTPUT
+
+          echo "validation_output<<${delimiter}" >> $GITHUB_OUTPUT
+          echo "$(cat test/validation_outputs/succeeded.txt)" >> $GITHUB_OUTPUT
+          echo "${delimiter}" >> $GITHUB_OUTPUT
+
 
   validate:
     if: github.event.act == false
@@ -84,7 +95,7 @@ jobs:
     runs-on: macOS-latest
     needs: parse-issue
     outputs:
-      validation_output: ${{ steps.validate.outputs.validation_output }}
+      validation_output: ${{ steps.set-output.outputs.validation_output }}
     steps:
       - name: Redirect api.segment.io to localhost
         id: redirect-segment
@@ -181,14 +192,15 @@ jobs:
           docker extension validate -a -s -i ${{ needs.parse-issue.outputs.repository }} &> output.txt
 
       - name: Read validation output
+        id: set-output
         run: |
-          delimiter=$(uuidgen)
-          echo "validation_output=<<$delimiter" >> $GITHUB_OUTPUT
-          cat output.txt >> $GITHUB_OUTPUT
-          echo "$delimiter" >> $GITHUB_OUTPUT
+          delimiter="$(openssl rand -hex 8)"
+          echo "validation_output<<${delimiter}" >> $GITHUB_OUTPUT
+          echo "$(cat output.txt)" >> $GITHUB_OUTPUT
+          echo "${delimiter}" >> $GITHUB_OUTPUT
 
-      - name: Mark jobs as failed
-        if: ${{ steps.validate.outcome }} == 'failure'
+      - name: Mark job as failed
+        if: steps.validate.outcome != 'success'
         run: exit 1
 
   validation-succeeded:
@@ -206,7 +218,7 @@ jobs:
           vars: |
             workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             extension: ${{ needs.parse-issue.outputs.repository }}
-            validation_output: ${{ needs.validate.outputs.validation_output || needs.noop-validate.outputs.validation_output }}
+            validation_output: ${{ toJSON(format('{0}{1}', needs.validate.outputs.validation_output, needs.noop-validate.outputs.validation_output)) }}
 
       - name: Add Comment
         if: env.ACT == false
@@ -215,12 +227,17 @@ jobs:
           issue-number: ${{ github.event.issue.number }}
           body: ${{ steps.render.outputs.result }}
 
-      - name: Update labels
-        if: env.ACT == false
-        run: |
-          gh issue edit ${{ github.event.issue.number }} --remove-label "docker/validation-errored"
-          gh issue edit ${{ github.event.issue.number }} --remove-label "validation/failed"
-          gh issue edit ${{ github.event.issue.number }} --add-label "validation/succeeded"
+      - name: Remove label docker/validation-errored
+        if: env.ACT == false && contains(github.event.issue.labels.*.name, 'docker/validation-errored')
+        run: gh issue edit ${{ github.event.issue.number }} --remove-label "docker/validation-errored"
+
+      - name: Remove label validation/failed
+        if: env.ACT == false && contains(github.event.issue.labels.*.name, 'validation/failed')
+        run: gh issue edit ${{ github.event.issue.number }} --remove-label "validation/failed"
+
+      - name: Add label validation/succeeded
+        if: env.ACT == false && !contains(github.event.issue.labels.*.name, 'validation/succeeded')
+        run: gh issue edit ${{ github.event.issue.number }} --add-label "validation/succeeded"
 
   validation-failed:
     runs-on: ubuntu-latest
@@ -239,7 +256,8 @@ jobs:
           template: .github/workflows/templates/validation-failed.md
           vars: |
             workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            validation_output: ${{ needs.validate.outputs.validation_output || needs.noop-validate.outputs.validation_output }}
+            extension: ${{ needs.parse-issue.outputs.repository }}
+            validation_output: ${{ toJSON(format('{0}{1}', needs.validate.outputs.validation_output, needs.noop-validate.outputs.validation_output)) }}
 
       - name: Add comment
         if: env.ACT == false
@@ -248,12 +266,17 @@ jobs:
           issue-number: ${{ github.event.issue.number }}
           body: ${{ steps.render.outputs.result }}
 
-      - name: Update labels
-        if: env.ACT == false
-        run: |
-          gh issue edit ${{ github.event.issue.number }} --remove-label "docker/validation-errored"
-          gh issue edit ${{ github.event.issue.number }} --remove-label "validation/succeeded"
-          gh issue edit ${{ github.event.issue.number }} --add-label "validation/failed"
+      - name: Remove label docker/validation-errored
+        if: env.ACT == false && contains(github.event.issue.labels.*.name, 'docker/validation-errored')
+        run: gh issue edit ${{ github.event.issue.number }} --remove-label "docker/validation-errored"
+
+      - name: Remove label validation/succeeded
+        if: env.ACT == false && contains(github.event.issue.labels.*.name, 'validation/succeeded')
+        run: gh issue edit ${{ github.event.issue.number }} --remove-label "validation/succeeded"
+
+      - name: Add label validation/failed
+        if: env.ACT == false && !contains(github.event.issue.labels.*.name, 'validation/failed')
+        run: gh issue edit ${{ github.event.issue.number }} --add-label "validation/failed"
 
       - name: Mark job as failed
         run: exit 1
@@ -275,7 +298,6 @@ jobs:
           template: .github/workflows/templates/validation-errored.md
           vars: |
             workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            validation_output: ${{ needs.validate.outputs.validation_output || needs.noop-validate.outputs.validation_output }}
 
       - name: Add comment
         if: env.ACT == false
@@ -285,9 +307,9 @@ jobs:
           body: ${{ steps.render.outputs.result }}
 
       - name: Add 'docker/validation-errored' label
-        if: env.ACT == false
-        run: |
-          gh issue edit ${{ github.event.issue.number }} --add-label "docker/validation-errored"
+        if: env.ACT == false && contains(github.event.issue.labels.*.name, 'docker/validation-errored')
+        run: gh issue edit ${{ github.event.issue.number }} --add-label "docker/validation-errored"
+
 
       - name: Mark job as failed
         run: exit 1
