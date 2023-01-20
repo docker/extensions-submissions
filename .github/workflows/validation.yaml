@@ -100,7 +100,7 @@ jobs:
         uses: mavrosxristoforos/get-xml-info@1.1.1
         id: get-build-url
         with:
-          xml-path: appcast.xml
+          xml-file: appcast.xml
           xpath: //channel/link
 
       - name: Get Docker Desktop latest build number
