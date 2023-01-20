@@ -66,10 +66,16 @@ jobs:
     outputs:
       validation_output: ${{ steps.set-output.outputs.validation_output }}
     steps:
+      - uses: actions/checkout@v3
       - id: set-output
         run: |
           if [[ ${TEST_VALIDATION_FAILED} ]]; then
-            echo "validation_output=There are errors" >> $GITHUB_OUTPUT
+            content=$(cat test/validation_output.txt)
+            content="${content//'%'/'%25'}"
+            content="${content//$'\n'/'%0A'}"
+            content="${content//$'\r'/'%0D'}"
+
+            echo "validation_output=$content" >> $GITHUB_OUTPUT
             exit 1
           fi
           if [[ ${TEST_VALIDATION_ERRORED} ]]; then
@@ -182,10 +188,12 @@ jobs:
 
       - name: Read validation output
         run: |
-          delimiter=$(uuidgen)
-          echo "validation_output=<<$delimiter" >> $GITHUB_OUTPUT
-          cat output.txt >> $GITHUB_OUTPUT
-          echo "$delimiter" >> $GITHUB_OUTPUT
+          content=$(cat output.txt)
+          content="${content//'%'/'%25'}"
+          content="${content//$'\n'/'%0A'}"
+          content="${content//$'\r'/'%0D'}"
+
+          echo "validation_output=$content" >> $GITHUB_OUTPUT
 
       - name: Mark jobs as failed
         if: ${{ steps.validate.outcome }} == 'failure'
@@ -206,7 +214,8 @@ jobs:
           vars: |
             workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             extension: ${{ needs.parse-issue.outputs.repository }}
-            validation_output: ${{ needs.validate.outputs.validation_output || needs.noop-validate.outputs.validation_output }}
+            validation_output: |
+              ${{ format('{0} {1}', needs.validate.outputs.validation_output, needs.noop-validate.outputs.validation_output) }}
 
       - name: Add Comment
         if: env.ACT == false
@@ -239,7 +248,8 @@ jobs:
           template: .github/workflows/templates/validation-failed.md
           vars: |
             workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            validation_output: ${{ needs.validate.outputs.validation_output || needs.noop-validate.outputs.validation_output }}
+            validation_output: |
+              ${{ format('{0} {1}', needs.validate.outputs.validation_output, needs.noop-validate.outputs.validation_output) }}
 
       - name: Add comment
         if: env.ACT == false
@@ -275,7 +285,8 @@ jobs:
           template: .github/workflows/templates/validation-errored.md
           vars: |
             workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            validation_output: ${{ needs.validate.outputs.validation_output || needs.noop-validate.outputs.validation_output }}
+            validation_output: |
+              ${{ format('{0} {1}', needs.validate.outputs.validation_output, needs.noop-validate.outputs.validation_output) }}
 
       - name: Add comment
         if: env.ACT == false
