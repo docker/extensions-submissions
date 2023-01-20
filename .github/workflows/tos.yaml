@@ -16,14 +16,14 @@ env:
   GH_REPO: ${{ github.repository }}
 
 jobs:
-  check:
-    if: github.event.issue.closed == false
+  parse-issue:
+    if: github.event.issue.state == 'open'
     name: Ensure Terms of Service are accepted
     runs-on: ubuntu-latest
     permissions:
       issues: write
     outputs:
-        accepted: ${{ steps.are_tos_accepted.outputs.accepted }}
+      accepted: ${{ steps.set-output.outputs.accepted }}
     steps:
       - name: Run /validate command
         if: github.event_name == 'issue_comment'
@@ -39,27 +39,31 @@ jobs:
         uses: zentered/issue-forms-body-parser@v1.5.1
 
       - name: Find TOS checkbox state
-        id: are_tos_accepted
+        id: set-output
         run: |
-          echo "accepted=$(echo '${{ steps.parse.outputs.data }}' | jq -r '.["terms-of-services"].list[0].checked' )" >> $GITHUB_OUTPUT
+          accepted=$(echo '${{ steps.parse.outputs.data }}' | jq -r '.["terms-of-services"].list[0].checked' )
+          echo "accepted=$accepted" >> $GITHUB_OUTPUT
 
-      - name: Remove 'tos/accepted' label
-        if: steps.are_tos_accepted.outputs.accepted == 'false'
+      - name: Validate tos
+        if: steps.set-output.outputs.accepted == 'null'
         run: |
-          gh issue edit ${{ github.event.issue.number }} --remove-label tos/accepted
-          gh issue edit ${{ github.event.issue.number }} --add-label tos/not-accepted
+          # Check if $GITHUB_STEP_SUMMARY exist o avoid the following lines to error when running with act
+          if [[ -w "$GITHUB_STEP_SUMMARY" ]]; then
+            echo "No checkbox for the tos found in the body of the issue ${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
+            echo "Is the \"terms-of-services\" field present?" >> $GITHUB_STEP_SUMMARY
+            echo ${{ steps.parse.outputs.data }} >> $GITHUB_STEP_SUMMARY
+          fi
+          exit 1
 
-      - name: Add 'tos/accepted' label
-        if: steps.are_tos_accepted.outputs.accepted == 'true'
-        run: |
-          gh issue edit ${{ github.event.issue.number }} --add-label tos/accepted
-          gh issue edit ${{ github.event.issue.number }} --remove-label tos/not-accepted
-
+  tos-not-accepted:
+    runs-on: ubuntu-latest
+    needs: [parse-issue]
+    if: needs.parse-issue.outputs.accepted == 'false'
+    steps:
       - uses: actions/checkout@v3
 
-      - name: Render template when tos are not accepted
-        id: template_tos_not_accepted
-        if: steps.are_tos_accepted.outputs.accepted == 'false'
+      - name: Render template
+        id: render
         uses: chuhlomin/render-template@v1.6
         with:
           template: .github/workflows/templates/tos-not-accepted.md
@@ -67,17 +71,29 @@ jobs:
             workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             user: ${{ github.event.issue.user.login}}
 
-      - name: Add Comment if tos not accepted
-        if: steps.are_tos_accepted.outputs.accepted == 'false'
+      - name: Add comment
+        if: env.ACT == true && steps.are_tos_accepted.outputs.accepted == 'false'
         uses: peter-evans/create-or-update-comment@v2
         with:
           edit-mode: replace
           issue-number: ${{ github.event.issue.number }}
-          body: ${{ steps.template_tos_not_accepted.outputs.result }}
+          body: ${{ steps.render.outputs.result }}
 
-      - name: Render template when tos are accepted
-        id: template_tos_accepted
-        if: steps.are_tos_accepted.outputs.accepted == 'true'
+      - name: Remove 'tos/accepted' label
+        if: steps.are_tos_accepted.outputs.accepted == 'false'
+        run: |
+          gh issue edit ${{ github.event.issue.number }} --remove-label tos/accepted
+          gh issue edit ${{ github.event.issue.number }} --add-label tos/not-accepted
+
+  tos-accepted:
+    runs-on: ubuntu-latest
+    needs: [ parse-issue ]
+    if: needs.parse-issue.outputs.accepted == 'true'
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Render template
+        id: render
         uses: chuhlomin/render-template@v1.6
         with:
           template: .github/workflows/templates/tos-accepted.md
@@ -85,13 +101,26 @@ jobs:
             workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             user: ${{ github.event.issue.user.login}}
 
-      - name: Add Comment if tos accepted
-        if: steps.are_tos_accepted.outputs.accepted == 'true'
+      - name: Add comment
+        if: env.ACT == true && steps.are_tos_accepted.outputs.accepted == 'true'
         uses: peter-evans/create-or-update-comment@v2
         with:
           edit-mode: replace
           issue-number: ${{ github.event.issue.number }}
           body: ${{ steps.template_tos_accepted.outputs.result }}
+
+      - name: Add 'tos/accepted' label
+        if: steps.are_tos_accepted.outputs.accepted == 'true'
+        run: |
+          gh issue edit ${{ github.event.issue.number }} --add-label tos/accepted
+          gh issue edit ${{ github.event.issue.number }} --remove-label tos/not-accepted
+
+  tos-not-found:
+    runs-on: ubuntu-latest
+    needs: [ parse-issue ]
+    if: failure()
+    steps:
+      - uses: actions/checkout@v3
 
       - name: Render template when tos are not found
         id: template_tos_not_found
@@ -103,15 +132,18 @@ jobs:
             workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Add comment if tos not found
-        if: steps.are_tos_accepted.outputs.accepted == 'null'
+        if: env.ACT == true && steps.are_tos_accepted.outputs.accepted == 'null'
         uses: peter-evans/create-or-update-comment@v2
         with:
           edit-mode: replace
           issue-number: ${{ github.event.issue.number }}
           body: ${{ steps.template_tos_not_found.outputs.result }}
 
+      - name: Mark job as failed
+        run: exit 1
+
   validate:
     name: Extension validation
-    needs: check
-    if: needs.check.outputs.accepted == 'true'
+    needs: parse-issue
+    if: needs.parse-issue.outputs.accepted == 'true'
     uses: ./.github/workflows/validation.yaml
