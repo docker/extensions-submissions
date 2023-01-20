@@ -106,7 +106,7 @@ jobs:
       - name: Get Docker Desktop latest build number
         id: get-build-number
         run: |
-          build=$(echo ${{ steps.get-build-url.outputs.result }} | sed -E 's/.*\/([0-9]+)\/.*/\1/')
+          build=$(echo ${{ steps.get-build-url.outputs.info }} | sed -E 's/.*\/([0-9]+)\/.*/\1/')
           echo "build=$build" >> $GITHUB_OUTPUT
 
       - name: Get Docker app cache
@@ -218,6 +218,7 @@ jobs:
       - name: Update labels
         if: env.ACT == false
         run: |
+          gh issue edit ${{ github.event.issue.number }} --remove-label "docker/validation-errored"
           gh issue edit ${{ github.event.issue.number }} --remove-label "validation/failed"
           gh issue edit ${{ github.event.issue.number }} --add-label "validation/succeeded"
 
@@ -241,7 +242,7 @@ jobs:
             validation_output: ${{ needs.validate.outputs.validation_output || needs.noop-validate.outputs.validation_output }}
 
       - name: Add comment
-        if: env.ACT == false # do not comment when running with act
+        if: env.ACT == false
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.issue.number }}
@@ -250,6 +251,7 @@ jobs:
       - name: Update labels
         if: env.ACT == false
         run: |
+          gh issue edit ${{ github.event.issue.number }} --remove-label "docker/validation-errored"
           gh issue edit ${{ github.event.issue.number }} --remove-label "validation/succeeded"
           gh issue edit ${{ github.event.issue.number }} --add-label "validation/failed"
 
@@ -276,7 +278,7 @@ jobs:
             validation_output: ${{ needs.validate.outputs.validation_output || needs.noop-validate.outputs.validation_output }}
 
       - name: Add comment
-        if: env.ACT == false # do not comment when running with act
+        if: env.ACT == false
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.issue.number }}

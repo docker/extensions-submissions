@@ -72,7 +72,7 @@ jobs:
             user: ${{ github.event.issue.user.login}}
 
       - name: Add comment
-        if: env.ACT == true && steps.are_tos_accepted.outputs.accepted == 'false'
+        if: env.ACT == false
         uses: peter-evans/create-or-update-comment@v2
         with:
           edit-mode: replace
@@ -80,7 +80,7 @@ jobs:
           body: ${{ steps.render.outputs.result }}
 
       - name: Remove 'tos/accepted' label
-        if: steps.are_tos_accepted.outputs.accepted == 'false'
+        if: env.ACT == false
         run: |
           gh issue edit ${{ github.event.issue.number }} --remove-label tos/accepted
           gh issue edit ${{ github.event.issue.number }} --add-label tos/not-accepted
@@ -88,7 +88,7 @@ jobs:
   tos-accepted:
     runs-on: ubuntu-latest
     needs: [ parse-issue ]
-    if: needs.parse-issue.outputs.accepted == 'true'
+    if: needs.parse-issue.outputs.accepted == 'true' && !contains(github.event.issue.labels.*.name, 'tos/accepted')
     steps:
       - uses: actions/checkout@v3
 
@@ -102,7 +102,7 @@ jobs:
             user: ${{ github.event.issue.user.login}}
 
       - name: Add comment
-        if: env.ACT == true && steps.are_tos_accepted.outputs.accepted == 'true'
+        if: env.ACT == false
         uses: peter-evans/create-or-update-comment@v2
         with:
           edit-mode: replace
@@ -110,7 +110,7 @@ jobs:
           body: ${{ steps.template_tos_accepted.outputs.result }}
 
       - name: Add 'tos/accepted' label
-        if: steps.are_tos_accepted.outputs.accepted == 'true'
+        if: env.ACT == false
         run: |
           gh issue edit ${{ github.event.issue.number }} --add-label tos/accepted
           gh issue edit ${{ github.event.issue.number }} --remove-label tos/not-accepted
@@ -118,13 +118,12 @@ jobs:
   tos-not-found:
     runs-on: ubuntu-latest
     needs: [ parse-issue ]
-    if: failure()
+    if: failure() && needs.parse-issue.outputs.accepted == 'null'
     steps:
       - uses: actions/checkout@v3
 
       - name: Render template when tos are not found
         id: template_tos_not_found
-        if: steps.are_tos_accepted.outputs.accepted == 'null'
         uses: chuhlomin/render-template@v1.6
         with:
           template: .github/workflows/templates/tos-not-found.md
@@ -132,7 +131,7 @@ jobs:
             workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
       - name: Add comment if tos not found
-        if: env.ACT == true && steps.are_tos_accepted.outputs.accepted == 'null'
+        if: env.ACT == false
         uses: peter-evans/create-or-update-comment@v2
         with:
           edit-mode: replace
