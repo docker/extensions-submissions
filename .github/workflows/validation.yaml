@@ -143,7 +143,7 @@ jobs:
           sw_vers
           mkdir ./temp
           mkdir ./mount
-          wget -q -O ./temp/DockerDesktop.dmg ${{ steps.get-build-url.outputs.result }}
+          wget -q -O ./temp/DockerDesktop.dmg ${{ steps.get-build-url.outputs.info }}
           /usr/bin/hdiutil attach -noverify ./temp/DockerDesktop.dmg -mountpoint ./mount/desktop -nobrowse
           echo "dmg mounted"
           sudo ./mount/desktop/Docker.app/Contents/MacOS/install --accept-license
