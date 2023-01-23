@@ -15,6 +15,10 @@ env:
   GH_TOKEN: ${{ github.token }}
   GH_REPO: ${{ github.repository }}
 
+concurrency:
+  group: submission-${{ github.event.issue.number }}
+  cancel-in-progress: true
+
 jobs:
   parse-issue:
     if: github.event.issue.state == 'open'
