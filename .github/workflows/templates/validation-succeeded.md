@@ -13,6 +13,3 @@ In the meantime, you can answer a couple of questions to tell us how your experi
 
 > {{ .validation_output }}
 </details>
-
----
-See [action]({{ .workflow_url }}) for more details.

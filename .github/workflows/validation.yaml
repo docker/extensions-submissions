@@ -216,7 +216,6 @@ jobs:
         with:
           template: .github/workflows/templates/validation-succeeded.md
           vars: |
-            workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             extension: ${{ needs.parse-issue.outputs.repository }}
             validation_output: ${{ toJSON(format('{0}{1}', needs.validate.outputs.validation_output, needs.noop-validate.outputs.validation_output)) }}
 
@@ -255,7 +254,6 @@ jobs:
         with:
           template: .github/workflows/templates/validation-failed.md
           vars: |
-            workflow_url: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
             extension: ${{ needs.parse-issue.outputs.repository }}
             validation_output: ${{ toJSON(format('{0}{1}', needs.validate.outputs.validation_output, needs.noop-validate.outputs.validation_output)) }}
 

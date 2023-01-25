@@ -11,6 +11,3 @@ docker extension validate -a -s -i {{ .extension }}
 Then you can trigger the validation commenting `/validate` when you are ready.
 
 See https://docs.docker.com/desktop/extensions-sdk/extensions/validate/ for more information.
-
----
-See [action]({{ .workflow_url }}) for more details.
