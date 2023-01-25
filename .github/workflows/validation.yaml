@@ -91,7 +91,6 @@ jobs:
 
   validate:
     if: github.event.act == false
-    name: Validate extension
     runs-on: macOS-latest
     needs: parse-issue
     outputs:
