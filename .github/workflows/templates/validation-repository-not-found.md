@@ -5,6 +5,3 @@ Please add the following section to the body of the issue with the extension nam
 ```md
 ### Docker Hub repository name
 ```
-
----
-See [action]({{ .workflow_url }}) for more details.
