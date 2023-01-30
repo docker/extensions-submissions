@@ -140,9 +140,6 @@ jobs:
         run: exit 1
 
   validate:
-    concurrency:
-      group: submission-${{ github.event.issue.number }}
-      cancel-in-progress: true
     name: Extension validation
     needs: parse-issue
     if: needs.parse-issue.outputs.accepted == 'true'
