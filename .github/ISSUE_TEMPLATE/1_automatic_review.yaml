@@ -1,19 +1,19 @@
 name: Submit a Self Published extension
 description: Submit your extension to be automatically validated and published on the marketplace without Docker review.
 title: "[Submission]: "
-assignees: []
+assignees: ["@docker/extensions"]
 body:
   - type: markdown
     attributes:
       value: |
         Hi :wave:,
-        
+
         Speaking for the whole @docker/extensions, thank you for creating an extension and submitting it!
-        
+
         Once you have filled the following form and submitted this issue, some automatic validations will run.
-        
+
         :+1: If everything goes well, a new label `validation/succeeded` will be added and the @docker/extensions will be pinged. Later, someone from the team will add the `publish/ready` which will trigger an automatic job to publish the extension on the marketplace.
-        
+
         :confused: If there are some issues, we will add the problems as comment and close the issue. Once you have fixed all the problems, re-open the issue and the process will start over.
   - type: input
     attributes:
