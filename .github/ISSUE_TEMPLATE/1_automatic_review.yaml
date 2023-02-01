@@ -1,24 +1,16 @@
-name: Submit a Self Published extension
+name: Submit to extension marketplace - Self-published
 description: Submit your extension to be automatically validated and published on the marketplace without Docker review.
-title: "[Submission]: "
+title: '[Submission]: '
 assignees: []
 body:
   - type: markdown
     attributes:
       value: |
-        Hi :wave:,
-        
-        Speaking for the whole @docker/extensions, thank you for creating an extension and submitting it!
-        
-        Once you have filled the following form and submitted this issue, some automatic validations will run.
-        
-        :+1: If everything goes well, a new label `validation/succeeded` will be added and the @docker/extensions will be pinged. Later, someone from the team will add the `publish/ready` which will trigger an automatic job to publish the extension on the marketplace.
-        
-        :confused: If there are some issues, we will add the problems as comment and close the issue. Once you have fixed all the problems, re-open the issue and the process will start over.
+        Thank you for creating an extension and submitting it to our marketplace!
   - type: input
     attributes:
       label: Docker Hub repository name
-      description: Provide the Docker Hub repository name for your extension so that we can install it.
+      description: Provide the Docker Hub repository name for your extension.
       placeholder: docker/resource-usage-extension
     validations:
       required: true
@@ -36,4 +28,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        We will contact you if necessary using the email address that is associated with your Docker Hub account.
+        Once you have filled the form and submitted this issue, we will run automated validation on the extension.
+
+        :+1: If everything goes well, a new label `validation/succeeded` will be added and the @docker/extensions will authorise the publication of the extension to the marketplace.
+
+        :confused: If there are issues, you will see details in comments on the issue and information about how to fix them and re-run validation.
+
+        If needed, we will use the email address associated with your Docker Hub account for any communication related to your extension.

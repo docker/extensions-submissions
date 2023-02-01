@@ -1,6 +1,6 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Submit a Docker Reviewed extension
+  - name: Submit to extension marketplace - with Docker review
     url: https://www.docker.com/products/extensions/submissions/
     about: Submit your extension to be reviewed by the Docker Extensions team.
   - name: Share an extension idea
