@@ -17,12 +17,12 @@ body:
   - type: markdown
     attributes:
       value: |
-        :warning: We automatically validate the greatest [semver](https://semver.org/) tag available on Docker Hub. See [the documentation](https://docs.docker.com/desktop/extensions-sdk/extensions/DISTRIBUTION/#release-your-extension) for more details.
+        :warning: We automatically validate the greatest [semver](https://semver.org/){:target="_blank"} tag available on Docker Hub. See [the documentation](https://docs.docker.com/desktop/extensions-sdk/extensions/DISTRIBUTION/#release-your-extension){:target="_blank"} for more details.
   - type: checkboxes
     attributes:
       label: Terms of services
       options:
-        - label: I accept the [term of services](https://www.docker.com/legal/extensions_marketplace_developer_agreement/)
+        - label: I accept the [term of services](https://www.docker.com/legal/extensions_marketplace_developer_agreement/){:target="_blank"}
     validations:
       required: true
   - type: markdown
