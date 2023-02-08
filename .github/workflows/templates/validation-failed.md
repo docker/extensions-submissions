@@ -10,4 +10,4 @@ docker extension validate -a -s -i {{ .extension }}
 
 Then you can trigger the validation commenting `/validate` when you are ready.
 
-See https://docs.docker.com/desktop/extensions-sdk/extensions/validate/ for more information.
+See [https://docs.docker.com/desktop/extensions-sdk/extensions/validate/](https://docs.docker.com/desktop/extensions-sdk/extensions/validate/){:target="_blank"} for more information.
