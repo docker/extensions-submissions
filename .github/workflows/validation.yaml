@@ -13,9 +13,9 @@ jobs:
     outputs:
       repository: ${{ steps.set-output.outputs.repository }}
     steps:
-      - name: Parse issue body
+      - name: Issue Forms Body Parser
         id: parse
-        uses: zentered/issue-forms-body-parser@v1.5.1
+        uses: zentered/issue-forms-body-parser@v2.1.1
 
       - name: Find extension repository
         id: set-output
@@ -104,7 +104,7 @@ jobs:
 
       - name: Download appcast
         run: |
-          curl https://prod-docker-desktop.s3.amazonaws.com/mac/main/amd64/appcast.xml -o appcast.xml
+          curl https://desktop-stage.docker.com/mac/main/amd64/97832/appcast.xml -o appcast.xml
 
       - name: Get Docker Desktop latest build url
         uses: mavrosxristoforos/get-xml-info@1.1.1
@@ -188,7 +188,7 @@ jobs:
         continue-on-error: true
         run: |
           touch output.txt
-          docker extension validate -a -s -i ${{ needs.parse-issue.outputs.repository }} &> output.txt
+          docker extension validate -a -e -s -i ${{ needs.parse-issue.outputs.repository }} &> output.txt
 
       - name: Read validation output
         id: set-output
