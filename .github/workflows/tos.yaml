@@ -87,7 +87,7 @@ jobs:
   tos-accepted:
     runs-on: ubuntu-latest
     needs: [ parse-issue ]
-    if: needs.parse-issue.outputs.accepted == 'true'
+    if: needs.parse-issue.outputs.accepted == 'true' && !contains(github.event.issue.labels.*.name, 'tos/accepted')
     steps:
       - uses: actions/checkout@v3
 
@@ -112,7 +112,7 @@ jobs:
         run: gh issue edit ${{ github.event.issue.number }} --remove-label tos/not-accepted
 
       - name: Add 'tos/accepted' label
-        if: env.ACT == false && !contains(github.event.issue.labels.*.name, 'tos/accepted')
+        if: env.ACT == false
         run: gh issue edit ${{ github.event.issue.number }} --add-label tos/accepted
 
   tos-not-found:
