@@ -188,7 +188,7 @@ jobs:
         continue-on-error: true
         run: |
           touch output.txt
-          docker extension validate -a -s -i ${{ needs.parse-issue.outputs.repository }} &> output.txt
+          docker extension validate --auto-resolve-tag --errors-only --sdk-compatibility --validate-install-uninstall ${{ needs.parse-issue.outputs.repository }} &> output.txt
 
       - name: Read validation output
         id: set-output
