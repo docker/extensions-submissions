@@ -95,6 +95,7 @@ jobs:
     needs: parse-issue
     outputs:
       validation_output: ${{ steps.set-output.outputs.validation_output }}
+      share_link: ${{ steps.share-link.outputs.share-link }}
     steps:
       - name: Redirect api.segment.io to localhost
         id: redirect-segment
@@ -202,6 +203,11 @@ jobs:
         if: steps.validate.outcome != 'success'
         run: exit 1
 
+      - name: Generate share link
+        id: share-link
+        run: |
+          echo "share-link=$(docker extension share ${{ needs.parse-issue.outputs.repository }})" >> $GITHUB_OUTPUT
+
   validation-succeeded:
     runs-on: ubuntu-latest
     needs: [parse-issue, noop-validate, validate]
@@ -216,7 +222,7 @@ jobs:
           template: .github/workflows/templates/validation-succeeded.md
           vars: |
             extension: ${{ needs.parse-issue.outputs.repository }}
-            validation_output: ${{ toJSON(format('{0}{1}', needs.validate.outputs.validation_output, needs.noop-validate.outputs.validation_output)) }}
+            share_link: ${{ needs.validate.outputs.share_link }}
 
       - name: Add Comment
         if: env.ACT == false
