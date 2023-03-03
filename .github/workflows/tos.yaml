@@ -17,6 +17,7 @@ env:
 
 jobs:
   react-to-new-issue:
+    name: Post a comment to new issues
     if: github.event_name == 'issues' && github.event.action == 'opened'
     runs-on: ubuntu-latest
     outputs:
@@ -32,23 +33,33 @@ jobs:
 
             The validation of your submission will start soon.
 
-  parse-issue:
-    needs: react-to-new-issue
-    if: always() && github.event.issue.state == 'open'
-    name: Ensure Terms of Service are accepted
+  is-revalidation:
+    if: github.event.issue.state == 'open' && github.event_name == 'issue_comment'
+    name: Verify if the comment is a revalidation request
     runs-on: ubuntu-latest
-    outputs:
-      accepted: ${{ steps.set-output.outputs.accepted }}
     steps:
       - name: Run /validate command
-        if: github.event_name == 'issue_comment'
         run: |
           command=$(echo "${{ github.event.comment.body }}" | head -1)
           if [[ $command != "/validate"* ]]; then
             echo "No /validate command found in first line of the comment \"${command}\", skipping" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
+      - name: Add reactions
+        if: env.ACT == false
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: '+1'
 
+  parse-issue:
+    needs: [ react-to-new-issue, is-revalidation ]
+    if: always() && github.event.issue.state == 'open'
+    name: Ensure Terms of Service are accepted
+    runs-on: ubuntu-latest
+    outputs:
+      accepted: ${{ steps.set-output.outputs.accepted }}
+    steps:
       - name: Parse issue body
         id: parse
         uses: zentered/issue-forms-body-parser@v1.5.1
