@@ -16,8 +16,25 @@ env:
   GH_REPO: ${{ github.repository }}
 
 jobs:
+  react-to-new-issue:
+    if: github.event_name == 'issues' && github.event.action == 'opened'
+    runs-on: ubuntu-latest
+    outputs:
+      comment-id: ${{ steps.comment.outputs.comment-id }}
+    steps:
+      - name: Add comment
+        id: comment
+        uses: peter-evans/create-or-update-comment@v1
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            Thank you for submitting your extension.
+
+            The validation will start as soon as we have verified that you have accepted the [term of services](https://www.docker.com/legal/extensions_marketplace_developer_agreement/).
+
   parse-issue:
-    if: github.event.issue.state == 'open'
+    needs: react-to-new-issue
+    if: always() && github.event.issue.state == 'open'
     name: Ensure Terms of Service are accepted
     runs-on: ubuntu-latest
     outputs:
@@ -55,8 +72,8 @@ jobs:
 
   tos-not-accepted:
     runs-on: ubuntu-latest
-    needs: [ parse-issue ]
-    if: needs.parse-issue.outputs.accepted == 'false'
+    needs: [ react-to-new-issue, parse-issue ]
+    if: always() && needs.parse-issue.outputs.accepted == 'false'
     steps:
       - uses: actions/checkout@v3
 
@@ -72,6 +89,7 @@ jobs:
         if: env.ACT == false
         uses: peter-evans/create-or-update-comment@v2
         with:
+          comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace
           issue-number: ${{ github.event.issue.number }}
           body: ${{ steps.render.outputs.result }}
@@ -86,8 +104,8 @@ jobs:
 
   tos-accepted:
     runs-on: ubuntu-latest
-    needs: [ parse-issue ]
-    if: needs.parse-issue.outputs.accepted == 'true' && !contains(github.event.issue.labels.*.name, 'tos/accepted')
+    needs: [ react-to-new-issue, parse-issue ]
+    if: always() && needs.parse-issue.outputs.accepted == 'true' && !contains(github.event.issue.labels.*.name, 'tos/accepted')
     steps:
       - uses: actions/checkout@v3
 
@@ -103,6 +121,7 @@ jobs:
         if: env.ACT == false
         uses: peter-evans/create-or-update-comment@v2
         with:
+          comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace
           issue-number: ${{ github.event.issue.number }}
           body: ${{ steps.render.outputs.result }}
@@ -117,8 +136,8 @@ jobs:
 
   tos-not-found:
     runs-on: ubuntu-latest
-    needs: [ parse-issue ]
-    if: failure() && needs.parse-issue.outputs.accepted == 'null'
+    needs: [ react-to-new-issue, parse-issue ]
+    if: always() && needs.parse-issue.outputs.accepted == 'null'
     steps:
       - uses: actions/checkout@v3
 
@@ -132,6 +151,7 @@ jobs:
         if: env.ACT == false
         uses: peter-evans/create-or-update-comment@v2
         with:
+          comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace
           issue-number: ${{ github.event.issue.number }}
           body: ${{ steps.render.outputs.result }}
