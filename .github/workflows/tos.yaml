@@ -173,5 +173,5 @@ jobs:
   validate:
     name: Extension validation
     needs: parse-issue
-    if: needs.parse-issue.outputs.accepted == 'true'
+    if: always() && needs.parse-issue.outputs.accepted == 'true'
     uses: ./.github/workflows/validation.yaml
