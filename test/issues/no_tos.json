@@ -1,5 +1,7 @@
 {
   "act": true,
+  "event_name": "issues",
+  "action": "opened",
   "issue":{
     "state": "open",
     "body": "### Docker Hub repository name\n\nbenjaming/extension-builder-extension",

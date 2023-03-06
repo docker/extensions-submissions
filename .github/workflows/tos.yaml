@@ -24,6 +24,7 @@ jobs:
       comment-id: ${{ steps.comment.outputs.comment-id }}
     steps:
       - name: Add comment
+        if: env.ACT == false
         id: comment
         uses: peter-evans/create-or-update-comment@v1
         with:
@@ -54,7 +55,7 @@ jobs:
 
   parse-issue:
     needs: [ react-to-new-issue, is-revalidation ]
-    if: always() && github.event.issue.state == 'open'
+    if: failure() == false && github.event.issue.state == 'open'
     name: Ensure Terms of Service are accepted
     runs-on: ubuntu-latest
     outputs:
@@ -62,7 +63,7 @@ jobs:
     steps:
       - name: Parse issue body
         id: parse
-        uses: zentered/issue-forms-body-parser@v1.5.1
+        uses: zentered/issue-forms-body-parser@v2.1.1
 
       - name: Find TOS checkbox state
         id: set-output
@@ -116,7 +117,7 @@ jobs:
   tos-accepted:
     runs-on: ubuntu-latest
     needs: [ react-to-new-issue, parse-issue ]
-    if: always() && needs.parse-issue.outputs.accepted == 'true' && !contains(github.event.issue.labels.*.name, 'tos/accepted')
+    if: failure() == false && needs.parse-issue.outputs.accepted == 'true' && !contains(github.event.issue.labels.*.name, 'tos/accepted')
     steps:
       - uses: actions/checkout@v3
 

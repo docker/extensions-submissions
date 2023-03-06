@@ -1,16 +1,19 @@
+#!/bin/bash
 setup() {
     load 'node_modules/bats-support/load'
     load 'node_modules/bats-assert/load'
 }
 
+
 @test "tos accepted - validation succeeded" {
     run act issues -e test/issues/tos_accepted.json \
         --container-architecture linux/amd64
 
-    assert_line '[TOS Check/tos-accepted                        ]   ✅  Success - Main Render template'
-    assert_line '[validate/Extension validation/parse-issue]   ✅  Success - Main Find extension repository'
-    assert_line '[validate/Extension validation/validation-succeeded]   ✅  Success - Main Render template'
-    assert_line '[validate/Extension validation/validation-succeeded] 🏁  Job succeeded'
+    assert_line --regexp '^\[TOS Check\/Post a comment to new issues[[:blank:]]*\] 🏁  Job succeeded$'
+    assert_line --regexp '^\[TOS Check\/tos-accepted[[:blank:]]*\]   ✅  Success - Main Render template'
+    assert_line --regexp '^\[validate\/Extension validation\/parse-issue[[:blank:]]*\]   ✅  Success - Main Find extension repository$'
+    assert_line --regexp '^\[validate\/Extension validation\/validation-succeeded[[:blank:]]*\]   ✅  Success - Main Render template$'
+    assert_line --regexp '^\[validate\/Extension validation\/validation-succeeded[[:blank:]]*\] 🏁  Job succeeded$'
     refute_line --partial 'validation-failed'
     refute_line --partial 'validation-error'
     assert_success
@@ -21,9 +24,9 @@ setup() {
         --env TEST_VALIDATION_FAILED=true \
         --container-architecture linux/amd64
 
-    assert_line '[TOS Check/tos-accepted                        ]   ✅  Success - Main Render template'
-    assert_line '[validate/Extension validation/validation-failed   ]   ✅  Success - Main Render template'
-    assert_line '[validate/Extension validation/validation-failed   ]   ❌  Failure - Main Mark job as failed'
+    assert_line --regexp '^\[TOS Check\/tos-accepted[[:blank:]]*\]   ✅  Success - Main Render template$'
+    assert_line --regexp '^\[validate\/Extension validation\/validation-failed[[:blank:]]*\]   ✅  Success - Main Render template$'
+    assert_line --regexp '^\[validate\/Extension validation\/validation-failed[[:blank:]]*\]   ❌  Failure - Main Mark job as failed$'
     refute_line --partial 'validation-succeeded'
     refute_line --partial 'validation-error'
     assert_failure
@@ -34,8 +37,8 @@ setup() {
         --env TEST_VALIDATION_ERRORED=true \
         --container-architecture linux/amd64
 
-    assert_line '[validate/Extension validation/validation-errored  ]   ✅  Success - Main Render template'
-    assert_line '[validate/Extension validation/validation-errored  ]   ❌  Failure - Main Mark job as failed'
+    assert_line --regexp '^\[validate\/Extension validation\/validation-errored[[:blank:]]*\]   ✅  Success - Main Render template$'
+    assert_line --regexp '^\[validate\/Extension validation\/validation-errored[[:blank:]]*\]   ❌  Failure - Main Mark job as failed$'
     refute_line --partial 'validation-succeeded'
     refute_line --partial 'validation-failed'
     assert_failure
@@ -45,8 +48,9 @@ setup() {
     run act issues -e test/issues/tos_not_accepted.json \
         --container-architecture linux/amd64
 
-    assert_line '[TOS Check/tos-not-accepted                    ]   ✅  Success - Main Render template'
-    assert_line '[TOS Check/tos-not-accepted                    ] 🏁  Job succeeded'
+    assert_line --regexp '^\[TOS Check\/tos-not-accepted[[:blank:]]*\]   ✅  Success - Main Render template'
+    assert_line --regexp '^\[TOS Check\/tos-not-accepted[[:blank:]]*\] 🏁  Job succeeded'
+    refute_line --regexp '^\[validate.*'
     assert_success
 }
 
@@ -54,8 +58,8 @@ setup() {
     run act issues -e test/issues/no_tos.json \
         --container-architecture linux/amd64
 
-    assert_line '[TOS Check/Ensure Terms of Service are accepted]   ❌  Failure - Main Validate tos'
-    assert_line '[TOS Check/tos-not-found                       ]   ❌  Failure - Main Mark job as failed'
+    assert_line --regexp '^\[TOS Check\/Ensure Terms of Service are accepted[[:blank:]]*\]   ❌  Failure - Main Validate tos$'
+    assert_line --regexp '^\[TOS Check\/tos-not-found[[:blank:]]*\]   ❌  Failure - Main Mark job as failed'
     assert_failure
 }
 
@@ -63,8 +67,8 @@ setup() {
     run act issues -e test/issues/no_repository.json \
         --container-architecture linux/amd64
 
-    assert_line '[validate/Extension validation/parse-issue]   ❌  Failure - Main Validate repository'
-    assert_line '[validate/Extension validation/error             ]   ❌  Failure - Main Mark job as failed'
+    assert_line --regexp '^\[validate\/Extension validation\/parse-issue[[:blank:]]*\]   ❌  Failure - Main Validate repository$'
+    assert_line --regexp '^\[validate\/Extension validation\/error[[:blank:]]*\]   ❌  Failure - Main Mark job as failed$'
     assert_failure
 }
 
@@ -72,8 +76,8 @@ setup() {
     run act issue_comment -e test/issue_comment/with_command.json \
         --container-architecture linux/amd64
 
-    assert_line '[TOS Check/Ensure Terms of Service are accepted]   ✅  Success - Main Run /validate command'
-    assert_line '[validate/Extension validation/validation-succeeded] 🏁  Job succeeded'
+    assert_line --regexp '^\[TOS Check.* ✅  Success - Main Run /validate command$'
+    assert_line --regexp '^\[validate\/Extension validation\/validation-succeeded[[:blank:]]*\] 🏁  Job succeeded$'
     refute_line --partial 'validation-failed'
     refute_line --partial 'validation-error'
     assert_success
@@ -83,6 +87,15 @@ setup() {
     run act issue_comment -e test/issue_comment/with_command_on_closed_issue.json \
         --container-architecture linux/amd64
 
-    refute_output
+    refute_line --partial 'TOS Check'
+    refute_line --partial 'validation'
     assert_success
+}
+
+@test "comment without /validate - no validation" {
+    run act issue_comment -e test/issue_comment/without_command.json \
+                --container-architecture linux/amd64
+
+    assert_line --regexp '^\[TOS Check.* ❌  Failure - Main Run /validate command$'
+    assert_failure
 }
