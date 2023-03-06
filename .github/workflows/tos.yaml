@@ -30,7 +30,7 @@ jobs:
           body: |
             Thank you for submitting your extension.
 
-            The validation will start as soon as we have verified that you have accepted the [term of services](https://www.docker.com/legal/extensions_marketplace_developer_agreement/).
+            The validation of your submission will start soon.
 
   parse-issue:
     needs: react-to-new-issue
