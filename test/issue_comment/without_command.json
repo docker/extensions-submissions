@@ -1,0 +1,12 @@
+{
+  "act": true,
+  "action": "created",
+  "comment": {
+    "body": "nothing should happen"
+  },
+  "issue":{
+    "state": "open",
+    "number": 1,
+    "body": "### Docker Hub repository name\n\nbenjaming/extension-builder-extension\n\n### Terms of services\n\n- [X] I accept the [term of services](https://www.docker.com/legal/extensions_marketplace_developer_agreement/)"
+  }
+}

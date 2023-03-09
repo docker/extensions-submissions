@@ -1,5 +1,7 @@
 {
   "act": true,
+  "event_name": "issues",
+  "action": "opened",
   "issue":{
     "state": "open",
     "body": "### Terms of services\n\n- [x] I accept the [term of services](https://www.docker.com/legal/extensions_marketplace_developer_agreement/)",

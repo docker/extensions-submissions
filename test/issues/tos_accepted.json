@@ -1,5 +1,7 @@
 {
   "act": true,
+  "event_name": "issues",
+  "action": "opened",
   "issue":{
     "state": "open",
     "number": 1,

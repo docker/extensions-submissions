@@ -39,7 +39,7 @@ jobs:
     needs: parse-issue
     if: failure()
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3.3.0
 
       - name: Render template
         id: render
@@ -64,9 +64,9 @@ jobs:
     runs-on: ubuntu-latest
     needs: parse-issue
     outputs:
-      validation_output: ${{ steps.set-output.outputs.validation_output }}
+      validation_output: ${{ steps.set-output.outputs.validation_output || '' }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3.3.0
       - id: set-output
         run: |
           delimiter="$(openssl rand -hex 8)"
@@ -83,10 +83,6 @@ jobs:
             # Do not set the validation_output variable on failure
             exit 1
           fi
-
-          echo "validation_output<<${delimiter}" >> $GITHUB_OUTPUT
-          echo "$(cat test/validation_outputs/succeeded.txt)" >> $GITHUB_OUTPUT
-          echo "${delimiter}" >> $GITHUB_OUTPUT
 
 
   validate:
@@ -213,7 +209,7 @@ jobs:
     needs: [parse-issue, noop-validate, validate]
     if: always() && (needs.validate.result == 'success' || needs.noop-validate.result == 'success')
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3.3.0
 
       - name: Render template
         id: render
@@ -251,7 +247,7 @@ jobs:
       (needs.validate.result == 'failure' && needs.validate.outputs.validation_output != '') ||
       (needs.noop-validate.result == 'failure' && needs.noop-validate.outputs.validation_output != '')
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3.3.0
 
       - name: Render template
         id: render
@@ -292,7 +288,7 @@ jobs:
       (needs.validate.result == 'failure' && needs.validate.outputs.validation_output == '') ||
       (needs.noop-validate.result == 'failure' && needs.noop-validate.outputs.validation_output == '')
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v3.3.0
 
       - name: Render template
         id: render
