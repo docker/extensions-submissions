@@ -19,5 +19,5 @@ You can also run tests using [bats](https://github.com/bats-core/bats-core).
 
 ```node
 npm install
-npm run test
+GITHUB_TOKEN=$(gh auth token) npm run test
 ```

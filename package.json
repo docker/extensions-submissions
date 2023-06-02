@@ -1,11 +1,21 @@
 {
+  "type": "module",
   "license": "Apache-2.0",
   "scripts": {
-    "test": "bats tests.bats"
+    "build": "tsc",
+    "test": "bats tests.bats",
+    "test:unit": "jest"
   },
   "devDependencies": {
-    "bats": "github:bats-core/bats-core#master",
-    "bats-assert": "https://github.com/bats-core/bats-assert",
-    "bats-support": "https://github.com/bats-core/bats-support"
+    "@babel/core": "^7.22.1",
+    "@babel/preset-env": "^7.22.4",
+    "babel-jest": "^29.5.0",
+    "bats": "bats-core/bats-core#v1.9.0",
+    "bats-assert": "bats-core/bats-assert#v2.1.0",
+    "bats-support": "bats-core/bats-support#v0.3.0",
+    "jest": "^29.5.0"
+  },
+  "dependencies": {
+    "@actions/core": "^1.10.0"
   }
 }

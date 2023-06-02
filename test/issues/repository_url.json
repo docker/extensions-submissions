@@ -1,0 +1,13 @@
+{
+  "act": true,
+  "event_name": "issues",
+  "action": "opened",
+  "issue":{
+    "state": "open",
+    "number": 1,
+    "body": "### Docker Hub repository name\n\nhttps://hub.docker.com/r/benjaming/extension-builder-extension\n\n### Terms of services\n\n- [X] I accept the [term of services](https://www.docker.com/legal/extensions_marketplace_developer_agreement/)",
+    "user": {
+      "login": "benjaming"
+    }
+  }
+}
