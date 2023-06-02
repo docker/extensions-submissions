@@ -11,7 +11,7 @@ jobs:
   parse-issue:
     runs-on: ubuntu-latest
     outputs:
-      repository: ${{ steps.set-output.outputs.repository }}
+      repository: ${{ steps.validate.outputs.repository }}
     steps:
       - name: Parse issue body
         id: parse
@@ -25,7 +25,7 @@ jobs:
           repository=$(echo $JSON_DATA | jq -r '.["docker-hub-repository-name"].text' )
           echo "repository=$repository" >> $GITHUB_OUTPUT
 
-      - name: Validate repository
+      - name: Ensure repository is filled
         if: steps.set-output.outputs.repository == 'null'
         env:
           PARSED_DATA: ${{ steps.parse.outputs.data }}
@@ -37,6 +37,21 @@ jobs:
             echo $PARSED_DATA >> $GITHUB_STEP_SUMMARY
           fi
           exit 1
+
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate repository
+        id: validate
+        env:
+          REPOSITORY: ${{ steps.set-output.outputs.repository }}
+        run: node .github/actions-scripts/sanitize-repository.js
 
   error:
     runs-on: ubuntu-latest
