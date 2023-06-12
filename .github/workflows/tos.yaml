@@ -40,10 +40,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Run /validate command
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          command=$(echo "$COMMENT_BODY" | head -1)
+          command=$(echo "${{ github.event.comment.body }}" | head -1)
           if [[ $command != "/validate"* ]]; then
             echo "No /validate command found in first line of the comment \"${command}\", skipping" >> $GITHUB_STEP_SUMMARY
             exit 1
@@ -69,22 +67,18 @@ jobs:
 
       - name: Find TOS checkbox state
         id: set-output
-        env:
-          JSON_DATA: ${{ toJSON(steps.parse.outputs.data) }}
         run: |
-          accepted=$(echo $JSON_DATA | jq -r '.["terms-of-services"].list[0].checked')
+          accepted=$(echo ${{ toJSON(steps.parse.outputs.data) }} | jq -r '.["terms-of-services"].list[0].checked')
           echo "accepted=$accepted" >> $GITHUB_OUTPUT
 
       - name: Validate tos
         if: steps.set-output.outputs.accepted == 'null'
-        env:
-          PARSED_DATA: ${{ steps.parse.outputs.data }}
         run: |
           # Check if $GITHUB_STEP_SUMMARY exist to avoid the following lines to error when running with act
           if [[ -w "$GITHUB_STEP_SUMMARY" ]]; then
             echo "No checkbox for the tos found in the body of the issue ${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
             echo "Is the \"terms-of-services\" field present?" >> $GITHUB_STEP_SUMMARY
-            echo $PARSED_DATA >> $GITHUB_STEP_SUMMARY
+            echo ${{ steps.parse.outputs.data }} >> $GITHUB_STEP_SUMMARY
           fi
           exit 1
 
