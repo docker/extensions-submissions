@@ -19,18 +19,22 @@ jobs:
 
       - name: Find extension repository
         id: set-output
+        env:
+          JSON_DATA: ${{ steps.parse.outputs.data }}
         run: |
-          repository=$(echo '${{ steps.parse.outputs.data }}' | jq -r '.["docker-hub-repository-name"].text' )
+          repository=$(echo $JSON_DATA | jq -r '.["docker-hub-repository-name"].text' )
           echo "repository=$repository" >> $GITHUB_OUTPUT
 
       - name: Ensure repository is filled
         if: steps.set-output.outputs.repository == 'null'
+        env:
+          PARSED_DATA: ${{ steps.parse.outputs.data }}
         run: |
           # Check if $GITHUB_STEP_SUMMARY exist to avoid the following lines to error when running with act
           if [[ -w "$GITHUB_STEP_SUMMARY" ]]; then
             echo "No repository found in the body of the issue ${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
             echo "Is the \"docker-hub-repository-name\" field present?" >> $GITHUB_STEP_SUMMARY
-            echo ${{ steps.parse.outputs.data }} >> $GITHUB_STEP_SUMMARY
+            echo $PARSED_DATA >> $GITHUB_STEP_SUMMARY
           fi
           exit 1
 
@@ -198,9 +202,11 @@ jobs:
       - name: Validate extension
         id: validate
         continue-on-error: true
+        env:
+          REPOSITORY: ${{ needs.parse-issue.outputs.repository }}
         run: |
           touch output.txt
-          docker extension validate --auto-resolve-tag --errors-only --sdk-compatibility --validate-install-uninstall ${{ needs.parse-issue.outputs.repository }} &> output.txt
+          docker extension validate --auto-resolve-tag --errors-only --sdk-compatibility --validate-install-uninstall $REPOSITORY &> output.txt
 
       - name: Read validation output
         id: set-output
@@ -216,8 +222,10 @@ jobs:
 
       - name: Generate share link
         id: share-link
+        env:
+          REPOSITORY: ${{ needs.parse-issue.outputs.repository }}
         run: |
-          echo "share-link=$(docker extension share ${{ needs.parse-issue.outputs.repository }})" >> $GITHUB_OUTPUT
+          echo "share-link=$(docker extension share $REPOSITORY)" >> $GITHUB_OUTPUT
 
   validation-succeeded:
     runs-on: ubuntu-latest
