@@ -124,10 +124,15 @@ jobs:
 
       - name: Get Docker Desktop latest build url
         uses: mavrosxristoforos/get-xml-info@1.1.1
-        id: get-build-url
+        id: get-latest-build-url
         with:
           xml-file: appcast.xml
           xpath: //channel/link
+
+      - name: Define the build URL to use
+        id: get-build-url
+        run:
+          echo "info=${{ env.DD_BUILD_URL || steps.get-latest-build-url.outputs.info }}" >> $GITHUB_OUTPUT
 
       - name: Get Docker Desktop latest build number
         id: get-build-number
