@@ -132,7 +132,7 @@ jobs:
       - name: Define the build URL to use
         id: get-build-url
         run:
-          echo "info=${{ env.DD_BUILD_URL || steps.get-latest-build-url.outputs.info }}" >> $GITHUB_OUTPUT
+          echo "info=${{ vars.DD_BUILD_URL || steps.get-latest-build-url.outputs.info }}" >> $GITHUB_OUTPUT
 
       - name: Get Docker Desktop latest build number
         id: get-build-number
