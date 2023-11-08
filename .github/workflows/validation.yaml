@@ -106,103 +106,13 @@ jobs:
 
   validate:
     if: github.event.act == false
-    runs-on: macOS-latest
+    runs-on: ubuntu22_16cores_64gb
     needs: parse-issue
     outputs:
       validation_output: ${{ steps.set-output.outputs.validation_output }}
       share_link: ${{ steps.share-link.outputs.share-link }}
     steps:
-      - name: Redirect api.segment.io to localhost
-        id: redirect-segment
-        run: |
-          echo '127.0.0.2 api.segment.io' | sudo tee -a /etc/hosts
-          cat /etc/hosts
-
-      - name: Download appcast
-        run: |
-          curl https://prod-docker-desktop.s3.amazonaws.com/mac/main/amd64/appcast.xml -o appcast.xml
-
-      - name: Get Docker Desktop latest build url
-        uses: mavrosxristoforos/get-xml-info@1.1.1
-        id: get-latest-build-url
-        with:
-          xml-file: appcast.xml
-          xpath: //channel/link
-
-      - name: Define the build URL to use
-        id: get-build-url
-        run:
-          echo "info=${{ vars.DD_BUILD_URL || steps.get-latest-build-url.outputs.info }}" >> $GITHUB_OUTPUT
-
-      - name: Get Docker Desktop latest build number
-        id: get-build-number
-        run: |
-          build=$(echo ${{ steps.get-build-url.outputs.info }} | sed -E 's/.*\/([0-9]+)\/.*/\1/')
-          echo "build=$build" >> $GITHUB_OUTPUT
-
-      - name: Get Docker app cache
-        id: cache-docker-desktop-app
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-docker-desktop-app
-        with:
-          path: /Applications/Docker.app
-          key: docker-desktop-app-mac-amd64-${{ steps.get-build-number.outputs.build }}
-
-      - name: Get Docker install settings cache
-        id: cache-docker-desktop-install-settings
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-docker-desktop-install-settings
-        with:
-          path: ./cache/desktopInstallSettings/
-          key: docker-desktop-install-settings-mac-${{ steps.get-build-number.outputs.build }}
-
-      - name: Copy Desktop install settings in /Library
-        if: steps.cache-docker-desktop-install-settings.outputs.cache-hit == 'true'
-        run: |
-          echo "ls ./cache/desktopInstallSettings/"
-          ls ./cache/desktopInstallSettings/
-          sudo mkdir -p "/Library/Application Support/com.docker.docker"
-          sudo cp ./cache/desktopInstallSettings/* "/Library/Application Support/com.docker.docker/"
-          echo "/Library/Application Support/com.docker.docker/"
-          ls "/Library/Application Support/com.docker.docker/"
-
-      - name: Fetch and install Docker Desktop dmg
-        if: steps.cache-docker-desktop-install-settings.outputs.cache-hit != 'true'
-        run: |
-          sw_vers
-          mkdir ./temp
-          mkdir ./mount
-          wget -q -O ./temp/DockerDesktop.dmg ${{ steps.get-build-url.outputs.info }}
-          /usr/bin/hdiutil attach -noverify ./temp/DockerDesktop.dmg -mountpoint ./mount/desktop -nobrowse
-          echo "dmg mounted"
-          sudo ./mount/desktop/Docker.app/Contents/MacOS/install --accept-license
-          echo "dmg installed"
-          echo "ls /Library/Application Support/com.docker.docker"
-          ls "/Library/Application Support/com.docker.docker" || true
-          mkdir -p ./cache/desktopInstallSettings
-          cp "/Library/Application Support/com.docker.docker/"* ./cache/desktopInstallSettings/
-          echo "ls ./cache/desktopInstallSettings/"
-          ls ./cache/desktopInstallSettings/ || true
-          /usr/bin/hdiutil detach ./mount/desktop
-          echo "dmg unmounted"
-
-      - name: Start Docker Desktop
-        timeout-minutes: 5
-        run: |
-          sudo mkdir /Library/PrivilegedHelperTools
-          sudo /Applications/Docker.app/Contents/MacOS/install config --user runner
-          sudo /Applications/Docker.app/Contents/MacOS/install vmnetd
-          echo "app installed"
-          /usr/bin/open /Applications/Docker.app --args --unattended --add-host-docker-internal-registry
-          echo "Docker starting..."
-
-      - name: Wait for Docker to be up and running
-        timeout-minutes: 10
-        run: |
-          until docker ps; do echo "ps failed, sleep 10 s and try again"; sleep 10; done
-          echo "Docker started and ready"
+      - uses: docker/desktop-action/start@v0.2.0
 
       - name: Validate extension
         id: validate
