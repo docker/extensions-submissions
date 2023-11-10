@@ -108,16 +108,17 @@ jobs:
     if: github.event.act == false
     runs-on: ubuntu22_16cores_64gb
     needs: parse-issue
+    environment: production
     outputs:
       validation_output: ${{ steps.set-output.outputs.validation_output }}
       share_link: ${{ steps.share-link.outputs.share-link }}
     steps:
       - uses: docker/desktop-action/start@v0.3.0
         with:
-          docker-desktop-build-url: ${{ env.DOCKER_DESKTOP_BUILD_URL || 'latest' }}
+          docker-desktop-build-url: ${{ vars.DOCKER_DESKTOP_BUILD_URL || 'latest' }}
 
       - if: ${{ env.DOCKER_DESKTOP_BUILD_URL != '' }}
-        run: echo "Docker Desktop build URL ${{ env.DOCKER_DESKTOP_BUILD_URL }}" >> $GITHUB_STEP_SUMMARY
+        run: echo "Docker Desktop build URL ${{ vars.DOCKER_DESKTOP_BUILD_URL }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Validate extension
         id: validate
