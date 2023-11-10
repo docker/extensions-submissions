@@ -112,7 +112,9 @@ jobs:
       validation_output: ${{ steps.set-output.outputs.validation_output }}
       share_link: ${{ steps.share-link.outputs.share-link }}
     steps:
-      - uses: docker/desktop-action/start@v0.2.0
+      - uses: docker/desktop-action/start@v0.3.0
+        with:
+          docker-desktop-build-url: ${{ env.DOCKER_DESKTOP_BUILD_URL || "latest" }}
 
       - name: Validate extension
         id: validate
