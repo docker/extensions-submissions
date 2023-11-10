@@ -114,7 +114,7 @@ jobs:
     steps:
       - uses: docker/desktop-action/start@v0.3.0
         with:
-          docker-desktop-build-url: ${{ env.DOCKER_DESKTOP_BUILD_URL || "latest" }}
+          docker-desktop-build-url: ${{ env.DOCKER_DESKTOP_BUILD_URL || 'latest' }}
 
       - if: ${{ env.DOCKER_DESKTOP_BUILD_URL != '' }}
         run: echo "Docker Desktop build URL ${{ env.DOCKER_DESKTOP_BUILD_URL }}" >> $GITHUB_STEP_SUMMARY
