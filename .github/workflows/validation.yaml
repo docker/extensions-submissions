@@ -112,7 +112,12 @@ jobs:
       validation_output: ${{ steps.set-output.outputs.validation_output }}
       share_link: ${{ steps.share-link.outputs.share-link }}
     steps:
-      - uses: docker/desktop-action/start@v0.2.0
+      - uses: docker/desktop-action/start@v0.3.0
+        with:
+          docker-desktop-build-url: ${{ env.DOCKER_DESKTOP_BUILD_URL || "latest" }}
+
+      - if: ${{ env.DOCKER_DESKTOP_BUILD_URL != '' }}
+        run: echo "Docker Desktop build URL ${{ env.DOCKER_DESKTOP_BUILD_URL }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Validate extension
         id: validate
