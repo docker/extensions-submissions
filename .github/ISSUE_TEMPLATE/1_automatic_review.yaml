@@ -1,6 +1,6 @@
-name: Submit to extension marketplace - Self-published
-description: Submit your extension to be automatically validated and published on the marketplace without Docker review.
-title: '[Submission]: '
+name: Submit to extension marketplace
+description: Submit your extension to be automatically validated and published on the marketplace.
+title: "[Submission]: "
 assignees: []
 body:
   - type: markdown
