@@ -26,7 +26,7 @@ jobs:
       - name: Add comment
         if: env.ACT == false
         id: comment
-        uses: peter-evans/create-or-update-comment@v1
+        uses: peter-evans/create-or-update-comment@v3
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
@@ -50,7 +50,7 @@ jobs:
           fi
       - name: Add reactions
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@v2
+        uses: peter-evans/create-or-update-comment@v3
         with:
           comment-id: ${{ github.event.comment.id }}
           reactions: '+1'
@@ -65,7 +65,7 @@ jobs:
     steps:
       - name: Parse issue body
         id: parse
-        uses: zentered/issue-forms-body-parser@v2.1.1
+        uses: zentered/issue-forms-body-parser@v2.2.0
 
       - name: Find TOS checkbox state
         id: set-output
@@ -93,11 +93,11 @@ jobs:
     needs: [ react-to-new-issue, parse-issue ]
     if: always() && needs.parse-issue.outputs.accepted == 'false'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Render template
         id: render
-        uses: chuhlomin/render-template@v1.6
+        uses: chuhlomin/render-template@v1.8
         with:
           template: .github/workflows/templates/tos-not-accepted.md
           vars: |
@@ -105,7 +105,7 @@ jobs:
 
       - name: Add comment
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@v2
+        uses: peter-evans/create-or-update-comment@v3
         with:
           comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace
@@ -125,11 +125,11 @@ jobs:
     needs: [ react-to-new-issue, parse-issue ]
     if: failure() == false && needs.parse-issue.outputs.accepted == 'true' && !contains(github.event.issue.labels.*.name, 'tos/accepted')
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Render template
         id: render
-        uses: chuhlomin/render-template@v1.6
+        uses: chuhlomin/render-template@v1.8
         with:
           template: .github/workflows/templates/tos-accepted.md
           vars: |
@@ -137,7 +137,7 @@ jobs:
 
       - name: Add comment
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@v2
+        uses: peter-evans/create-or-update-comment@v3
         with:
           comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace
@@ -157,17 +157,17 @@ jobs:
     needs: [ react-to-new-issue, parse-issue ]
     if: always() && needs.parse-issue.outputs.accepted == 'null'
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Render template when tos are not found
         id: render
-        uses: chuhlomin/render-template@v1.6
+        uses: chuhlomin/render-template@v1.8
         with:
           template: .github/workflows/templates/tos-not-found.md
 
       - name: Add comment if tos not found
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@v2
+        uses: peter-evans/create-or-update-comment@v3
         with:
           comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace

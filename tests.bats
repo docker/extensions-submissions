@@ -13,9 +13,9 @@ setup() {
 
     assert_line --regexp '^\[TOS Check\/Post a comment to new issues[[:blank:]]*\] 🏁  Job succeeded$'
     assert_line --regexp '^\[TOS Check\/tos-accepted[[:blank:]]*\]   ✅  Success - Main Render template'
-    assert_line --regexp '^\[validate\/Extension validation\/parse-issue[[:blank:]]*\]   ✅  Success - Main Find extension repository$'
-    assert_line --regexp '^\[validate\/Extension validation\/validation-succeeded[[:blank:]]*\]   ✅  Success - Main Render template$'
-    assert_line --regexp '^\[validate\/Extension validation\/validation-succeeded[[:blank:]]*\] 🏁  Job succeeded$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/parse-issue[[:blank:]]*\]   ✅  Success - Main Find extension repository$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/validation-succeeded[[:blank:]]*\]   ✅  Success - Main Render template$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/validation-succeeded[[:blank:]]*\] 🏁  Job succeeded$'
     refute_line --partial 'validation-failed'
     refute_line --partial 'validation-error'
     assert_success
@@ -28,10 +28,10 @@ setup() {
 
     assert_line --regexp '^\[TOS Check\/Post a comment to new issues[[:blank:]]*\] 🏁  Job succeeded$'
     assert_line --regexp '^\[TOS Check\/tos-accepted[[:blank:]]*\]   ✅  Success - Main Render template'
-    assert_line --regexp '^\[validate\/Extension validation\/parse-issue[[:blank:]]*\]   ✅  Success - Main Find extension repository$'
-    assert_line --regexp '^\[validate\/Extension validation\/parse-issue[[:blank:]]*\]   ✅  Success - Main Validate repository$'
-    assert_line --regexp '^\[validate\/Extension validation\/validation-succeeded[[:blank:]]*\]   ✅  Success - Main Render template$'
-    assert_line --regexp '^\[validate\/Extension validation\/validation-succeeded[[:blank:]]*\] 🏁  Job succeeded$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/parse-issue[[:blank:]]*\]   ✅  Success - Main Find extension repository$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/parse-issue[[:blank:]]*\]   ✅  Success - Main Validate repository$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/validation-succeeded[[:blank:]]*\]   ✅  Success - Main Render template$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/validation-succeeded[[:blank:]]*\] 🏁  Job succeeded$'
     refute_line --partial 'validation-failed'
     refute_line --partial 'validation-error'
     assert_success
@@ -44,8 +44,8 @@ setup() {
         -s GITHUB_TOKEN="$GITHUB_TOKEN"
 
     assert_line --regexp '^\[TOS Check\/tos-accepted[[:blank:]]*\]   ✅  Success - Main Render template$'
-    assert_line --regexp '^\[validate\/Extension validation\/validation-failed[[:blank:]]*\]   ✅  Success - Main Render template$'
-    assert_line --regexp '^\[validate\/Extension validation\/validation-failed[[:blank:]]*\]   ❌  Failure - Main Mark job as failed$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/validation-failed[[:blank:]]*\]   ✅  Success - Main Render template$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/validation-failed[[:blank:]]*\]   ❌  Failure - Main Mark job as failed$'
     refute_line --partial 'validation-succeeded'
     refute_line --partial 'validation-error'
     assert_failure
@@ -57,8 +57,8 @@ setup() {
         --container-architecture linux/amd64 \
         -s GITHUB_TOKEN="$GITHUB_TOKEN"
 
-    assert_line --regexp '^\[validate\/Extension validation\/validation-errored[[:blank:]]*\]   ✅  Success - Main Render template$'
-    assert_line --regexp '^\[validate\/Extension validation\/validation-errored[[:blank:]]*\]   ❌  Failure - Main Mark job as failed$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/validation-errored[[:blank:]]*\]   ✅  Success - Main Render template$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/validation-errored[[:blank:]]*\]   ❌  Failure - Main Mark job as failed$'
     refute_line --partial 'validation-succeeded'
     refute_line --partial 'validation-failed'
     assert_failure
@@ -71,7 +71,7 @@ setup() {
 
     assert_line --regexp '^\[TOS Check\/tos-not-accepted[[:blank:]]*\]   ✅  Success - Main Render template'
     assert_line --regexp '^\[TOS Check\/tos-not-accepted[[:blank:]]*\] 🏁  Job succeeded'
-    refute_line --regexp '^\[validate.*'
+    refute_line --regexp '^\[Extension validation.*'
     assert_success
 }
 
@@ -90,8 +90,8 @@ setup() {
         --container-architecture linux/amd64 \
         -s GITHUB_TOKEN="$GITHUB_TOKEN"
 
-    assert_line --regexp '^\[validate\/Extension validation\/parse-issue[[:blank:]]*\]   ❌  Failure - Main Ensure repository is filled$'
-    assert_line --regexp '^\[validate\/Extension validation\/error[[:blank:]]*\]   ❌  Failure - Main Mark job as failed$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/parse-issue[[:blank:]]*\]   ❌  Failure - Main Ensure repository is filled$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/error[[:blank:]]*\]   ❌  Failure - Main Mark job as failed$'
     assert_failure
 }
 
@@ -101,7 +101,7 @@ setup() {
         -s GITHUB_TOKEN="$GITHUB_TOKEN"
 
     assert_line --regexp '^\[TOS Check.* ✅  Success - Main Run /validate command$'
-    assert_line --regexp '^\[validate\/Extension validation\/validation-succeeded[[:blank:]]*\] 🏁  Job succeeded$'
+    assert_line --regexp '^\[Extension validation\/Extension validation\/validation-succeeded[[:blank:]]*\] 🏁  Job succeeded$'
     refute_line --partial 'validation-failed'
     refute_line --partial 'validation-error'
     assert_success

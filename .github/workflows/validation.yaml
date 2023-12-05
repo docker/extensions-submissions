@@ -15,7 +15,7 @@ jobs:
     steps:
       - name: Parse issue body
         id: parse
-        uses: zentered/issue-forms-body-parser@v1.5.1
+        uses: zentered/issue-forms-body-parser@v2.2.0
 
       - name: Find extension repository
         id: set-output
@@ -38,10 +38,10 @@ jobs:
           fi
           exit 1
 
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: actions/setup-node@v3
         with:
-          node-version: 18
+          node-version: 20
           cache: npm
 
       - name: Install dependencies
@@ -58,11 +58,11 @@ jobs:
     needs: parse-issue
     if: failure()
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4
 
       - name: Render template
         id: render
-        uses: chuhlomin/render-template@v1.6
+        uses: chuhlomin/render-template@v1.8
         with:
           template: .github/workflows/templates/validation-repository-not-found.md
           vars: |
@@ -70,7 +70,7 @@ jobs:
 
       - name: Add comment
         if: env.ACT == false # do not comment when running with act
-        uses: peter-evans/create-or-update-comment@v2
+        uses: peter-evans/create-or-update-comment@v3
         with:
           issue-number: ${{ github.event.issue.number }}
           body: ${{ steps.render.outputs.result }}
@@ -85,7 +85,7 @@ jobs:
     outputs:
       validation_output: ${{ steps.set-output.outputs.validation_output || '' }}
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4
       - id: set-output
         run: |
           delimiter="$(openssl rand -hex 8)"
@@ -153,11 +153,11 @@ jobs:
     needs: [parse-issue, noop-validate, validate]
     if: always() && (needs.validate.result == 'success' || needs.noop-validate.result == 'success')
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4
 
       - name: Render template
         id: render
-        uses: chuhlomin/render-template@v1.6
+        uses: chuhlomin/render-template@v1.8
         with:
           template: .github/workflows/templates/validation-succeeded.md
           vars: |
@@ -166,7 +166,7 @@ jobs:
 
       - name: Add Comment
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@v2
+        uses: peter-evans/create-or-update-comment@v3
         with:
           issue-number: ${{ github.event.issue.number }}
           body: ${{ steps.render.outputs.result }}
@@ -191,11 +191,11 @@ jobs:
       (needs.validate.result == 'failure' && needs.validate.outputs.validation_output != '') ||
       (needs.noop-validate.result == 'failure' && needs.noop-validate.outputs.validation_output != '')
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4
 
       - name: Render template
         id: render
-        uses: chuhlomin/render-template@v1.6
+        uses: chuhlomin/render-template@v1.8
         with:
           template: .github/workflows/templates/validation-failed.md
           vars: |
@@ -204,7 +204,7 @@ jobs:
 
       - name: Add comment
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@v2
+        uses: peter-evans/create-or-update-comment@v3
         with:
           issue-number: ${{ github.event.issue.number }}
           body: ${{ steps.render.outputs.result }}
@@ -232,11 +232,11 @@ jobs:
       (needs.validate.result == 'failure' && needs.validate.outputs.validation_output == '') ||
       (needs.noop-validate.result == 'failure' && needs.noop-validate.outputs.validation_output == '')
     steps:
-      - uses: actions/checkout@v3.3.0
+      - uses: actions/checkout@v4
 
       - name: Render template
         id: render
-        uses: chuhlomin/render-template@v1.6
+        uses: chuhlomin/render-template@v1.8
         with:
           template: .github/workflows/templates/validation-errored.md
           vars: |
@@ -244,7 +244,7 @@ jobs:
 
       - name: Add comment
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@v2
+        uses: peter-evans/create-or-update-comment@v3
         with:
           issue-number: ${{ github.event.issue.number }}
           body: ${{ steps.render.outputs.result }}
