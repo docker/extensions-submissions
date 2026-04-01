@@ -6,7 +6,7 @@ function run() {
     let { REPOSITORY: repository } = process.env
     if (!repository) throw new Error('REPOSITORY env var is not set')
 
-    if (repository.includes('http')) {
+    if (repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('<http')) {
         try {
             // When parsed the url will be like <https://hub.docker.com>
             const url = new URL(repository.replace(/[<>]/g, ''));

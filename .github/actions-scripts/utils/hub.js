@@ -8,12 +8,13 @@
  */
 export function getRepoFromHubURL(url) {
     if (url.host !== "hub.docker.com") {
-        throw "URL must be from hub.docker.com domain";
+        throw new Error("URL must be from hub.docker.com domain");
     }
 
-    if (url.pathname.indexOf('/r/') === -1) {
-        throw "URL must be a repository URL from Docker Hub";
+    const match = url.pathname.match(/^\/r\/([^/]+\/[^/]+)\/?$/);
+    if (!match) {
+        throw new Error("URL must be a repository URL from Docker Hub (e.g., https://hub.docker.com/r/namespace/repo)");
     }
 
-    return url.pathname.replace('/r/', '');
+    return match[1];
 }
