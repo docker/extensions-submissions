@@ -11,6 +11,10 @@ on:
       - created
       - edited
 
+permissions:
+  contents: read
+  issues: write
+
 env:
   GH_TOKEN: ${{ github.token }}
   GH_REPO: ${{ github.repository }}
@@ -26,7 +30,7 @@ jobs:
       - name: Add comment
         if: env.ACT == false
         id: comment
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
@@ -48,9 +52,24 @@ jobs:
             echo "No /validate command found in first line of the comment \"${command}\", skipping" >> $GITHUB_STEP_SUMMARY
             exit 1
           fi
+      - name: Check permissions
+        env:
+          COMMENT_AUTHOR: ${{ github.event.comment.user.login }}
+          ISSUE_AUTHOR: ${{ github.event.issue.user.login }}
+          AUTHOR_ASSOC: ${{ github.event.comment.author_association }}
+        run: |
+          if [[ "$COMMENT_AUTHOR" == "$ISSUE_AUTHOR" ]] || \
+             [[ "$AUTHOR_ASSOC" == "MEMBER" ]] || \
+             [[ "$AUTHOR_ASSOC" == "OWNER" ]] || \
+             [[ "$AUTHOR_ASSOC" == "COLLABORATOR" ]]; then
+            echo "Authorized: $COMMENT_AUTHOR ($AUTHOR_ASSOC)" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Unauthorized: not the issue author or a repository member" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
       - name: Add reactions
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
         with:
           comment-id: ${{ github.event.comment.id }}
           reactions: '+1'
@@ -65,14 +84,14 @@ jobs:
     steps:
       - name: Parse issue body
         id: parse
-        uses: zentered/issue-forms-body-parser@v2.2.0
+        uses: zentered/issue-forms-body-parser@93bd9fdcb3679be1889d2006e9c2cf496899402e # v2.2.0
 
       - name: Find TOS checkbox state
         id: set-output
         env:
           JSON_DATA: ${{ steps.parse.outputs.data }}
         run: |
-          accepted=$(echo $JSON_DATA | jq -r '.["terms-of-services"].list[0].checked')
+          accepted=$(echo "$JSON_DATA" | jq -r '.["terms-of-services"].list[0].checked')
           echo "accepted=$accepted" >> $GITHUB_OUTPUT
 
       - name: Validate tos
@@ -82,9 +101,9 @@ jobs:
         run: |
           # Check if $GITHUB_STEP_SUMMARY exist to avoid the following lines to error when running with act
           if [[ -w "$GITHUB_STEP_SUMMARY" ]]; then
-            echo "No checkbox for the tos found in the body of the issue ${{ inputs.issue_number }}" >> $GITHUB_STEP_SUMMARY
+            echo "No checkbox for the tos found in the body of the issue ${{ github.event.issue.number }}" >> $GITHUB_STEP_SUMMARY
             echo "Is the \"terms-of-services\" field present?" >> $GITHUB_STEP_SUMMARY
-            echo $PARSED_DATA >> $GITHUB_STEP_SUMMARY
+            echo "$PARSED_DATA" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit 1
 
@@ -93,11 +112,11 @@ jobs:
     needs: [ react-to-new-issue, parse-issue ]
     if: always() && needs.parse-issue.outputs.accepted == 'false'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Render template
         id: render
-        uses: chuhlomin/render-template@v1.8
+        uses: chuhlomin/render-template@6fb1fba85d147806447e81b82134f453d4371a0e # v1.8
         with:
           template: .github/workflows/templates/tos-not-accepted.md
           vars: |
@@ -105,7 +124,7 @@ jobs:
 
       - name: Add comment
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
         with:
           comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace
@@ -125,11 +144,11 @@ jobs:
     needs: [ react-to-new-issue, parse-issue ]
     if: failure() == false && needs.parse-issue.outputs.accepted == 'true' && !contains(github.event.issue.labels.*.name, 'tos/accepted')
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Render template
         id: render
-        uses: chuhlomin/render-template@v1.8
+        uses: chuhlomin/render-template@6fb1fba85d147806447e81b82134f453d4371a0e # v1.8
         with:
           template: .github/workflows/templates/tos-accepted.md
           vars: |
@@ -137,7 +156,7 @@ jobs:
 
       - name: Add comment
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
         with:
           comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace
@@ -157,17 +176,17 @@ jobs:
     needs: [ react-to-new-issue, parse-issue ]
     if: always() && needs.parse-issue.outputs.accepted == 'null'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Render template when tos are not found
         id: render
-        uses: chuhlomin/render-template@v1.8
+        uses: chuhlomin/render-template@6fb1fba85d147806447e81b82134f453d4371a0e # v1.8
         with:
           template: .github/workflows/templates/tos-not-found.md
 
       - name: Add comment if tos not found
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@v3
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
         with:
           comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace
@@ -179,6 +198,8 @@ jobs:
 
   validate:
     name: Extension validation
-    needs: parse-issue
-    if: always() && needs.parse-issue.outputs.accepted == 'true'
+    # SECURITY: is-revalidation contains the authorization check for /validate commands.
+    # It must remain in the needs array so that a failed auth check prevents validation.
+    needs: [ parse-issue, is-revalidation ]
+    if: always() && needs.parse-issue.outputs.accepted == 'true' && needs.is-revalidation.result != 'failure'
     uses: ./.github/workflows/validation.yaml

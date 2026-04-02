@@ -1,6 +1,13 @@
 :x: Validation failed with the following errors
 
-> {{ .validation_output }}
+<details>
+<summary>Validation output</summary>
+
+````
+{{ .validation_output }}
+````
+
+</details>
 
 Please fix the issues and check everything is ok locally with the following command:
 
