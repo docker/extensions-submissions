@@ -156,7 +156,8 @@ jobs:
           REPOSITORY: ${{ needs.parse-issue.outputs.repository }}
         run: |
           share_link=$(docker extension share "$REPOSITORY")
-          if [[ ! "$share_link" =~ ^https://[a-zA-Z0-9./?=_&%-]+$ ]]; then
+          url_regex='^https://[a-zA-Z0-9./?=_&%-]+$'
+          if [[ ! "$share_link" =~ $url_regex ]]; then
             echo "Unexpected share link format" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
