@@ -30,7 +30,7 @@ jobs:
       - name: Add comment
         if: env.ACT == false
         id: comment
-        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
@@ -69,7 +69,7 @@ jobs:
           fi
       - name: Add reactions
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           comment-id: ${{ github.event.comment.id }}
           reactions: '+1'
@@ -112,11 +112,11 @@ jobs:
     needs: [ react-to-new-issue, parse-issue ]
     if: always() && needs.parse-issue.outputs.accepted == 'false'
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Render template
         id: render
-        uses: chuhlomin/render-template@6fb1fba85d147806447e81b82134f453d4371a0e # v1.8
+        uses: chuhlomin/render-template@4a12ddbf4f679c56eeb3c7b275eeb469c73837be # v1.11
         with:
           template: .github/workflows/templates/tos-not-accepted.md
           vars: |
@@ -124,7 +124,7 @@ jobs:
 
       - name: Add comment
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace
@@ -144,11 +144,11 @@ jobs:
     needs: [ react-to-new-issue, parse-issue ]
     if: failure() == false && needs.parse-issue.outputs.accepted == 'true' && !contains(github.event.issue.labels.*.name, 'tos/accepted')
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Render template
         id: render
-        uses: chuhlomin/render-template@6fb1fba85d147806447e81b82134f453d4371a0e # v1.8
+        uses: chuhlomin/render-template@4a12ddbf4f679c56eeb3c7b275eeb469c73837be # v1.11
         with:
           template: .github/workflows/templates/tos-accepted.md
           vars: |
@@ -156,7 +156,7 @@ jobs:
 
       - name: Add comment
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace
@@ -176,17 +176,17 @@ jobs:
     needs: [ react-to-new-issue, parse-issue ]
     if: always() && needs.parse-issue.outputs.accepted == 'null'
     steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Render template when tos are not found
         id: render
-        uses: chuhlomin/render-template@6fb1fba85d147806447e81b82134f453d4371a0e # v1.8
+        uses: chuhlomin/render-template@4a12ddbf4f679c56eeb3c7b275eeb469c73837be # v1.11
         with:
           template: .github/workflows/templates/tos-not-found.md
 
       - name: Add comment if tos not found
         if: env.ACT == false
-        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4
+        uses: peter-evans/create-or-update-comment@e8674b075228eee787fea43ef493e45ece1004c9 # v5.0.0
         with:
           comment-id: ${{ needs.react-to-new-issue.outputs.comment-id }}
           edit-mode: replace
