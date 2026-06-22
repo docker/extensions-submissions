@@ -1,5 +1,8 @@
 # Docker Extensions Submissions
 
+> [!IMPORTANT]
+> Effective immediately: new submissions to the public Extensions Marketplace are paused while we review Marketplace security. You can still update existing extensions, and private Marketplace extensions are unaffected. Contact extensions@docker.com if you have additional questions.
+
 ## 👋 Welcome!
 
 You have created a Docker Extension and now want to make it available to every Docker Desktop users? Great! This is the right place to submit your extension.
