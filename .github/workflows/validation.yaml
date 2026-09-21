@@ -121,7 +121,7 @@ jobs:
       - if: ${{ vars.DOCKER_DESKTOP_BUILD_URL != '' }}
         run: echo "Docker Desktop build URL ${{ vars.DOCKER_DESKTOP_BUILD_URL }}" >> $GITHUB_STEP_SUMMARY
 
-      - uses: docker/desktop-action/start@ca8f1a94b6716d5b278b081b654fbb7cd0b8fdb3 # v0.3.6
+      - uses: docker/desktop-action/start@9b8f778b3af0208d6160772a362421958fca2497 # v0.4.4
         with:
           docker-desktop-build-url: ${{ vars.DOCKER_DESKTOP_BUILD_URL || 'latest' }}
 
