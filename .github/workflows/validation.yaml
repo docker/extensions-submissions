@@ -127,7 +127,7 @@ jobs:
 
       - name: Change Desktop settings and allow installing non marketplace extensions
         run: |
-          curl --unix-socket ~/.docker/desktop/backend.sock --data '{"onlyMarketplaceExtensions": false}' -H "content-type: application/json" -X POST http://localhost/app/settings
+          curl --unix-socket ~/.docker/desktop/backend.sock --data '{"onlyMarketplaceExtensions": false, "extensionsEnabled": true}' -H "content-type: application/json" -X POST http://localhost/app/settings
 
       - name: Validate extension
         id: validate
